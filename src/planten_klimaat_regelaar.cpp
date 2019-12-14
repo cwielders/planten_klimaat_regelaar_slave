@@ -24,9 +24,24 @@
 #define ISREGEN 9
 #define SEIZOEN 10
 #define TEMPERATUUR 0
-#define VOCHTIGHEID 1
+#define VOCHTIGHEIDNU 1
 #define POTVOCHTIGHEID 2
 #define LICHT 3
+
+#define WINTER 0,
+#define ZOMER 1,
+#define REGEN 2
+
+#define LICHTPIN 0
+#define SOILSENSORPIN 1
+#define SOILSENSORPOWER 2
+#define LUCHTTEMPVOCHT 3
+#define LAMPENPIN1 4
+#define LAMPENPIN2 5
+#define VENTILATORPIN 6
+#define NEVELPIN 7
+
+
 
 //volgende regel is voor tijdweergave klok
 #define countof(a) (sizeof(a) / sizeof(a[0]))
@@ -37,9 +52,9 @@ int plantenBakSettings1[3][4][12] = {{{6, 6, 6, 15, 35, 14, 70}, {8, 40, 1, 0, 1
 //int plantenBakSettings2[4][12] = {{84, 240, 236, 15, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 40, 2, 0, 30, 23, 85}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1}};
 //int plantenBakSettings3[4][12] = {{8, 40, 6, 15, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 40, 2, 0, 30, 23, 85}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}};
 // lampenaan, lampenuit, duurdauw, DUUR REGEN, dag temperatuur, nacht temperatuur, VOCHTIGHED
-byte pinArray1[8] = {A0, 9, A1, 4, 5, 10, 8, 7}; //1soilsensorPin1, 2soilPower1, 3lightsensorPin1, 4lampenPin1, 5ventilatorpin1, 6vernevelaarpin1, 7dhtpin, lampenpin21
-byte pinArray2[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
-byte pinArray3[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
+byte pinArray[3][8] = {{A1, A0, 9, 8, 10, 11, 12, 13}, {A1, A0, 9, 8, 10, 11, 12, 13}, {A1, A0, 9, 8, 10, 11, 12, 13}; 
+// byte pinArray2[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
+// byte pinArray3[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
 
 
 // String dataVoorScherm [3][15];
@@ -139,10 +154,10 @@ class LuchtVochtigheidTemperatuurSensor {
 };
 
 class KlimaatRegelaar {
-    byte lampenPin1;
-    byte lampenPin2;
-    byte nevelPin;
-    byte ventilatorPin;
+    byte lampenPin1[3];
+    byte lampenPin2[3];
+    byte nevelPin[3];
+    byte ventilatorPin[3];
     boolean isDag = false;
     boolean isDauw = false;
     boolean isRegenWolk = false;
@@ -151,38 +166,142 @@ class KlimaatRegelaar {
     boolean lampIsAan2 = false;
     boolean luchtIsDroog = false;
 
-    public:
-    KlimaatRegelaar(byte myLampenPin1, byte myLampenPin2, byte myNevelPin, byte myVentilatorPin) 
-   
-        {
-        lampenPin1 = myLampenPin1;
-        lampenPin2 = myLampenPin2;
-        nevelPin = myNevelPin;
-        ventilatorPin = myNevelPin;
-        pinMode(lampenPin1, OUTPUT);
-        digitalWrite(lampenPin1, LOW);
-        pinMode(lampenPin2, OUTPUT);
-        digitalWrite(lampenPin1, LOW);
-        pinMode(nevelPin, OUTPUT);
-        digitalWrite(nevelPin, LOW);
-        pinMode(ventilatorPin, OUTPUT);
-        digitalWrite(nevelPin, LOW);
-        digitalWrite(ventilatorPin, LOW);
-        // lampenaan, lampenuit, dauwaan, dauwuit, dag temperatuur, nacht temperatuur, dag vochtigheid, nacht vochtigheid, bewolkingaan, bewolkinguit)
-        }
+    //byte (&pins)[3][8];
 
-    void initialisatie() {
-        Serial.println("KlimaatRegelaar geinitialiseerd");
-        Serial.print("lampenPin1 = ");
-        Serial.println(lampenPin1);
-        Serial.print("lampenPin1 = ");
-        Serial.println(lampenPin2);
-        Serial.print("nevelPin = ");
-        Serial.println(nevelPin);
-        Serial.print("ventilatorPin = ");
-        Serial.println(ventilatorPin);
-        Serial.println();
+    public:
+    KlimaatRegelaar(byte (&myPins)[3][8]) {
+        lampenPin1[3] = {myPins[0][LAMPENPIN1], myPins[1][LAMPENPIN1], myPins[2][LAMPENPIN1]};
+        lampenPin2[3] = {myPins[0][LAMPENPIN2], myPins[1][LAMPENPIN2], myPins[2][LAMPENPIN2]};
+        nevelPin[3] = {myPins[0][NEVELPIN], myPins[1][NEVELPIN], myPins[2][NEVELPIN]};
+        ventilatorPin[3]= {myPins[0][VENTILATORPIN], myPins[1][VENTILATORPIN], myPins[2][VENTILATORPIN]};
     }
+
+    void setup() {
+        for (int i = 0; i < 3; i++){
+            pinMode(lampenPin1[i], OUTPUT);
+            digitalWrite(lampenPin1[i], LOW);
+            pinMode(lampenPin2[i], OUTPUT);
+            digitalWrite(lampenPin2[i], LOW);
+            pinMode(nevelPin[i], OUTPUT);
+            digitalWrite(nevelPin[i], LOW);
+            pinMode(ventilatorPin[i], OUTPUT);
+            digitalWrite(ventilatorPin[i], LOW);
+            Serial.println("Pins klimaatRegelaar plantenbak" + (i));
+            Serial.print("lampenPin1 = ");
+            Serial.println(lampenPin1[i]);
+            Serial.print("lampenPin1 = ");
+            Serial.println(lampenPin2[i]);
+            Serial.print("nevelPin = ");
+            Serial.println(nevelPin[i]);
+            Serial.print("ventilatorPin = ");
+            Serial.println(ventilatorPin[i]);
+            Serial.println();
+        }
+        Serial.println("KlimaatRegelaar geinitialiseerd");
+    }
+    
+    int * regelKlimaat (RtcDateTime now, int plantenBakNummer, int &(mysensorData)[4]) {
+
+        int temp = mysensorData[1];
+        int vocht = mysensorData[2];
+        int grond = mysensorData[3];
+        int licht = mysensorData[4];
+        Serial.println(temp);
+        Serial.println(vocht);
+        Serial.println(grond);
+        Serial.println(licht);
+    }
+    
+    int * getsettingsNu(RtcDateTime now, int myPlantenbakNummer) {
+
+    int plantenBakNummer = myPlantenbakNummer;
+    static int settingsNu[3][15];
+    
+    Serial.println("sezoencode = ");
+    Serial.println(plantenBakSettings1[plantenBakNummer][3][(now.Month()-1)]);
+    int seizoenNu = plantenBakSettings1[plantenBakNummer][3][maand];
+    Serial.println("seizoenNu = ");
+    Serial.println(seizoenNu);
+    int uurNu = now.Second();// terugveranderen naat hour()
+    int minuutNu = now.Minute();
+    float uurMinuutNu = uurNu + (minuutNu / 60);
+    Serial.println("uurMinuutNu = ");
+    Serial.println(uurMinuutNu);
+    boolean isDag;
+    boolean isDauw;
+    boolean isRegen;
+    switch (seizoenNu) {
+        case WINTER:
+          Serial.println("case 0");
+          break;
+        case ZOMER:
+          Serial.println("case 1");
+          break;
+        case REGEN:
+          Serial.println("case 2");
+          break;
+      }       
+    // switch(seizoenNu) {
+    // //if (seizoenNu == 0) {
+    //     case 0 :
+    //         Serial.println("KOM JE HIER 0?");
+    //     // for (int i = 0; i < 7; i++) {
+    //     //     settingsNu[i] = plantenBakSettings1[plantenBakNummer][0][i];
+    //     //     Serial.println(settingsNu[i]);
+    //     // }
+    //     // if (uurMinuutNu >= settingsNu[STARTDAG] && uurMinuutNu <= settingsNu[EINDDAG]) {
+    //     //     isDag = true;
+    //     // } 
+    //     //     else {
+    //     //         isDag = false;
+    //     //     }
+    //     // float startDauw = settingsNu[STARTDAG] - settingsNu[DUURDAUW];
+    //     // if (uurMinuutNu >= startDauw && uurMinuutNu <= settingsNu[STARTDAG]) {
+    //     //     isDauw = true;
+    //     // } 
+    //     //     else {
+    //     //     isDauw = false;
+    //     //     }
+    //     // float startBewolking = ((settingsNu[STARTDAG] + settingsNu[EINDDAG]) / 2) - (settingsNu[DUURREGEN] / 2);
+    //     // float eindBewolking = startBewolking + settingsNu[DUURREGEN];
+    //     // if (uurMinuutNu >= startBewolking && uurMinuutNu <= eindBewolking) {
+    //     //     isRegen = true;
+    //     // } 
+    //     //     else {
+    //     //         isRegen = false;
+    //     //     }
+    //     // settingsNu[7] = isDag;
+    //     // settingsNu[8] = isDauw;
+    //     // settingsNu[9] = isRegen;
+    //     // settingsNu[10] = WINTER;
+    //     // return settingsNu;
+    //     // }  // break;
+    //     case 1 :
+                
+    //     //if (seizoenNu == 1) {     
+    //             Serial.println("KOM JE HIER 1 ?");
+    //         // for (int i = 0; i < 7; i++) {
+    //         //     settingsNu[i] = plantenBakSettings1[plantenBakNummer][1][i];
+    //         //     Serial.println(settingsNu[i]);
+    //         // }
+    //         // return settingsNu;
+    //     }    //break;
+    //     case 2 :
+    //     //if (seizoenNu == 2) {
+    //         Serial.println("KOM JE HIER 2 ?");
+    //         // for (int i = 0; i < 7; i++) {
+    //         //     settingsNu[i] = plantenBakSettings1[plantenBakNummer][2][i];
+    //         //     Serial.println(settingsNu[i]);
+    //         // }
+    //         // return settingsNu;
+    //         // //break;
+    // //}
+    // }
+    Serial.print("getalin getsettings =" );
+    Serial.print(settingsNu[1]);
+    return settingsNu;     
+}
+
 
     float huidigeTijd(RtcDateTime now) {
 
@@ -514,116 +633,10 @@ class Klok {
     }
 };
 
-int * getsettingsNu(RtcDateTime now, int myPlantenbakNummer) {
 
-    int plantenBakNummer = myPlantenbakNummer;
-    //static int settingsNu[15];
-    static int settingsNu[11]={1,2,3,4,5,6,8,8,8,8};
-    Serial.println("sezoencode = ");
-    Serial.println(plantenBakSettings1[plantenBakNummer][3][11]);
-    int maand = now.Month()-1;
-    Serial.println("maand = ");
-    Serial.println(maand);
-    Serial.println("sezoencode = ");
-    
-    enum Seizoen {
-        WINTER = 0,
-        ZOMER = 1,
-        REGEN = 2
-    } seizoen;
-    
-    Serial.println(plantenBakSettings1[plantenBakNummer][3][maand]);
-    // Serial.println(settings[3][maand]);
-    Serial.println(plantenBakSettings1[plantenBakNummer][3][(now.Month()-1)]);
-    
-    // Serial.println(settings[3][(now.Month()-1)]);
-    // Serial.println(settings[3][maand]);
-    // Serial.println(settings[3][(maand-1)]);
-    int seizoenNu = plantenBakSettings1[plantenBakNummer][3][maand];
-    Serial.println("seizoenNu = ");
-    Serial.println(seizoenNu);
-    int uurNu = now.Second();// terugveranderen naat hour()
-    int minuutNu = now.Minute();
-    float uurMinuutNu = uurNu + (minuutNu / 60);
-    Serial.println("uurMinuutNu = ");
-    Serial.println(uurMinuutNu);
-    boolean isDag;
-    boolean isDauw;
-    boolean isRegen;
-    switch (seizoenNu) {
-        case WINTER:
-          Serial.println("case 0");
-          break;
-        case ZOMER:
-          Serial.println("case 1");
-          break;
-        case REGEN:
-          Serial.println("case 2");
-          break;
-      }       
-    // switch(seizoenNu) {
-    // //if (seizoenNu == 0) {
-    //     case 0 :
-    //         Serial.println("KOM JE HIER 0?");
-    //     // for (int i = 0; i < 7; i++) {
-    //     //     settingsNu[i] = plantenBakSettings1[plantenBakNummer][0][i];
-    //     //     Serial.println(settingsNu[i]);
-    //     // }
-    //     // if (uurMinuutNu >= settingsNu[STARTDAG] && uurMinuutNu <= settingsNu[EINDDAG]) {
-    //     //     isDag = true;
-    //     // } 
-    //     //     else {
-    //     //         isDag = false;
-    //     //     }
-    //     // float startDauw = settingsNu[STARTDAG] - settingsNu[DUURDAUW];
-    //     // if (uurMinuutNu >= startDauw && uurMinuutNu <= settingsNu[STARTDAG]) {
-    //     //     isDauw = true;
-    //     // } 
-    //     //     else {
-    //     //     isDauw = false;
-    //     //     }
-    //     // float startBewolking = ((settingsNu[STARTDAG] + settingsNu[EINDDAG]) / 2) - (settingsNu[DUURREGEN] / 2);
-    //     // float eindBewolking = startBewolking + settingsNu[DUURREGEN];
-    //     // if (uurMinuutNu >= startBewolking && uurMinuutNu <= eindBewolking) {
-    //     //     isRegen = true;
-    //     // } 
-    //     //     else {
-    //     //         isRegen = false;
-    //     //     }
-    //     // settingsNu[7] = isDag;
-    //     // settingsNu[8] = isDauw;
-    //     // settingsNu[9] = isRegen;
-    //     // settingsNu[10] = WINTER;
-    //     // return settingsNu;
-    //     // }  // break;
-    //     case 1 :
-                
-    //     //if (seizoenNu == 1) {     
-    //             Serial.println("KOM JE HIER 1 ?");
-    //         // for (int i = 0; i < 7; i++) {
-    //         //     settingsNu[i] = plantenBakSettings1[plantenBakNummer][1][i];
-    //         //     Serial.println(settingsNu[i]);
-    //         // }
-    //         // return settingsNu;
-    //     }    //break;
-    //     case 2 :
-    //     //if (seizoenNu == 2) {
-    //         Serial.println("KOM JE HIER 2 ?");
-    //         // for (int i = 0; i < 7; i++) {
-    //         //     settingsNu[i] = plantenBakSettings1[plantenBakNummer][2][i];
-    //         //     Serial.println(settingsNu[i]);
-    //         // }
-    //         // return settingsNu;
-    //         // //break;
-    // //}
-    // }
-    Serial.print("getalin getsettings =" );
-    Serial.print(settingsNu[1]);
-    return settingsNu;     
-}
 class Plantenbak {
 
-    KlimaatRegelaar klimaatRegelaar;
+    //KlimaatRegelaar klimaatRegelaar;
     SoilHumiditySensor soilHumiditySensor;
     LuchtVochtigheidTemperatuurSensor luchtVochtigheidTemperatuurSensor;
     LichtSensor lichtSensor;
@@ -637,11 +650,11 @@ class Plantenbak {
     int temperatuur;
 
     public:
-    Plantenbak(byte (&myPins)[8], int myPlantenBakNummer) :
-        soilHumiditySensor(myPins[0], myPins[1]),
-        lichtSensor(myPins[2]),
-        luchtVochtigheidTemperatuurSensor(myPins[6]),
-        klimaatRegelaar(myPins[3] , myPins[7], myPins[5], myPins[4]),
+    Plantenbak(byte (&myPins)[3][8], int myPlantenBakNummer) :
+        soilHumiditySensor(myPins[myPlantenBakNummer][SOILSENSORPIN], myPins[myPlantenBakNummer][SOILSENSORPOWER]),
+        lichtSensor(myPins[myPlantenBakNummer][LICHTPIN]),
+        luchtVochtigheidTemperatuurSensor(myPins[myPlantenBakNummer][LUCHTTEMPVOCHT]),
+        //klimaatRegelaar(myPins[3] , myPins[7], myPins[5], myPins[4]),
         plantenBakNummer(myPlantenBakNummer)
     {
     }
@@ -658,7 +671,7 @@ class Plantenbak {
         Serial.println("plantenbak geinitialseerd");
     }
 
-    void loop(RtcDateTime RtcObjectHuidigeTijd, int * mySettingsNu) {
+    int * getSensorData(RtcDateTime RtcObjectHuidigeTijd) {
         
         Serial.print("plantenBakNummer in loop = ");
         Serial.println(plantenBakNummer);
@@ -669,66 +682,16 @@ class Plantenbak {
         Serial.print(" %, Temp: ");
         Serial.print(temperatuur);
         Serial.println(" Celsius");
-        
-        // read the raw value from the soil sensor:
         Serial.print("Soil Moisture = ");  
         potVochtigheid = soilHumiditySensor.readValue();
         Serial.println(soilHumiditySensor.readValue());
-        // read the raw value from the light sensor:
         Serial.print("Raw = ");
         Serial.print(lichtSensor.readRawValue());
         Serial.print(" - Lux = ");
         licht = lichtSensor.readLogValue();
         Serial.println(lichtSensor.readLogValue());
         Serial.println("plantenBakSettings in loop");
-
-        Serial.println("doorgegeven settings in plantenbakloop");
-        Serial.println(mySettingsNu[0]);
-        Serial.println(mySettingsNu[1]);
-        Serial.println(mySettingsNu[2]);
-        Serial.println(mySettingsNu[3]);
-        Serial.println(mySettingsNu[4]);
-        Serial.println(mySettingsNu[5]);
-        // Serial.println(mySettingsNu[6]);
-        // Serial.println(mySettingsNu[7]);
-        // Serial.println(mySettingsNu[8]);
-        // Serial.println(mySettingsNu[9]);
-        // Serial.println(mySettingsNu[10]);
-        Serial.println("einde settingsNu");
-        // klimaatRegelaar.regelLicht(RtcObjectHuidigeTijd, settings);
-        // klimaatRegelaar.regelDauw(RtcObjectHuidigeTijd, temperatuur, luchtVochtigheid, settings);
-        // klimaatRegelaar.regelRegenWolken(RtcObjectHuidigeTijd, temperatuur, luchtVochtigheid, settings);
-        // klimaatRegelaar.regelVochtigheid(temperatuur, luchtVochtigheid, settings);
-        // klimaatRegelaar.regelTemperatuur(temperatuur, settings);
-// #define STARTDAG 0
-// #define EINDDAG 1
-// #define DUURDAUW 2
-// #define DUURREGEN 3
-// #define DAGTEMPERATUUR 4
-// #define NACHTTEMPERATUUR 5
-// #define LUCHTVOCHTIGHEID 6
-// #define ISDAG 7
-// #define ISDAUW 8
-// #define ISREGEN 9
-// #define SEIZOEN 10
-// #define TEMPERATUUR 11
-// #define VOCHTIGHEID 12
-// #define POTVOCHTIGHEID 13
-// #define LICHT 14
-
-        // for (int i = 0; i < 11; i++) {
-        //     dataVoorScherm[plantenBakNummer][i] = (String) mySettingsNu[i];
-        // }
-        // dataVoorScherm[plantenBakNummer][11] = (String) temperatuur;
-        // dataVoorScherm[plantenBakNummer][12] = (String) luchtVochtigheid;
-        // dataVoorScherm[plantenBakNummer][13] = (String) potVochtigheid;
-        // dataVoorScherm[plantenBakNummer][14] = (String) licht;
-
-        //return(dataVoorScherm);
-    }    
-
-    int * sensorMetingen() {
-        int metingen[4] = {potVochtigheid, luchtVochtigheid, temperatuur, licht};
+        int metingen[4] = {temperatuur, luchtVochtigheid, potVochtigheid, licht};
         return metingen;
     }
 
@@ -826,11 +789,12 @@ class TouchScreen {
 TouchScreen touchScreen;
 Klok klok;
 int bakNummer1 = 0;
-Plantenbak plantenbak1(pinArray1, bakNummer1);
+Plantenbak plantenbak1(pinArray, bakNummer1);
 int bakNummer2 = bakNummer1 + 1;
-Plantenbak plantenbak2(pinArray2, bakNummer2);
+Plantenbak plantenbak2(pinArray, bakNummer2);
 int bakNummer3 = bakNummer2 + 1;
-Plantenbak plantenbak3(pinArray3, bakNummer3);
+Plantenbak plantenbak3(pinArray, bakNummer3);
+KlimaatRegelaar klimaatRegelaar(pinArray);
 
 void setup() {
     Serial.begin(9600);
@@ -839,17 +803,24 @@ void setup() {
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
+    klimaatRegelaar.setup();
 }
 
 void loop()
 {
     
     RtcDateTime tijd = klok.getTime();
-    String datumTijd = klok.geefDatumTijdString(tijd);
+    int * sensorData1 = plantenbak1.getSensorData(tijd);
+    Serial.println(sensorData1[1]);
+    Serial.println(sensorData1[2]);
+    Serial.println(sensorData1[3]);
+    Serial.println(sensorData1[4]);
+    klimaatRegelaar.regelKlimaat(tijd, bakNummer1, sensorData1);
+    //String datumTijd = klok.geefDatumTijdString(tijd);
 
     static int * settings1 = getsettingsNu(tijd, bakNummer1);
     Serial.println("getalin loop =" + settings1[1]);
-    plantenbak1.loop(tijd, settings1);
+    
     static int * metingen1 = plantenbak1.sensorMetingen();
 
     static int * settings2 = getsettingsNu(tijd, bakNummer2);
