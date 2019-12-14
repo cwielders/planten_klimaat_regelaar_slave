@@ -79,10 +79,10 @@ class LichtSensor {
 };
 
 class SoilHumiditySensor {
-   
+
     byte pin;
     byte powerPin;
-   
+
     public:
     SoilHumiditySensor(byte myPin, byte myPowerPin) {
         pin = myPin;
