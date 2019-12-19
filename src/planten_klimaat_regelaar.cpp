@@ -714,6 +714,7 @@ class KlimaatDataLogger {
                 result = result + a + ",";
             }
         }
+        result = result + "end \n";
         return result;
     }
 };
@@ -828,8 +829,8 @@ Plantenbak plantenbak3(pinArray3, bakNummer3);
 void setup() {
     Serial.begin(9600);
     touchScreen.setup();
-    klok.setup();
     klimaatDataLogger.setup();
+    klok.setup();
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
