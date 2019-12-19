@@ -2,6 +2,8 @@
 #include <Wire.h> // must be included here so that Arduino library object file references work
 #include <RtcDS3231.h>
 
+#include <SD.h>
+
 #include <DHT.h>
 #include <DHT_U.h>
 
@@ -144,7 +146,7 @@ class LuchtVochtigheidTemperatuurSensor {
 };
 
 class DataKlimaat {
-    static int klimaatDataArray[3][15];
+    int klimaatDataArray[3][15];
     
     public:
     DataKlimaat() 
@@ -650,6 +652,72 @@ class Plantenbak {
     }  
 };
 
+class KlimaatDataLogger {
+    
+    File myFile;
+    int csPin = 53;
+
+    public:
+    KlimaatDataLogger() :
+        myFile()
+    {
+        pinMode(53, OUTPUT);
+    }
+
+    void setup() {
+        Serial.begin(9600);
+        Serial.print("Initializing card...");
+        if (!SD.begin(csPin)) {
+            Serial.println("initialization of the SD card failed!");
+            return;
+        }
+        Serial.println("initialization of the SDcard is done.");
+    }
+    
+    void writeToFile(String data) {
+        Serial.println("in writeToFile");
+        Serial.println(data);
+        myFile = SD.open("datafile.txt", FILE_WRITE);
+        if (myFile) {
+            Serial.print("Writing to the text file...");
+            myFile.println(data);
+            myFile.close(); // close the file:
+            Serial.println("done closing.");
+        }   else {
+                // if the file didn't open, report an error:
+                Serial.println("error opening the text file!");
+            }
+    }
+
+    void readFromFile() {
+        myFile = SD.open("datafile.txt");
+        if (myFile) {
+            Serial.println("datafile.txt bevat het volgende:");
+            // read all the text written on the file
+            while (myFile.available()) {
+                Serial.write(myFile.read());
+            }
+            // close the file:
+            myFile.close();
+        }   else {
+                // if the file didn't open, report an error:
+                Serial.println("error opening the text file!");
+            }
+    }
+
+    String maakKlimaatDataString() {
+        String a;
+        String result;
+        for(int plantenbak = 0; plantenbak < 3; plantenbak++) {
+            for(int variable = 0; variable < 15; variable++) {
+                a = klimaatDataNu[plantenbak][variable];
+                result = result + a + ",";
+            }
+        }
+        return result;
+    }
+};
+
 class TouchScreen {
     
     UTFT myGLCD;
@@ -745,9 +813,11 @@ class TouchScreen {
     }
 };
 
-int DataKlimaat::klimaatDataArray[3][15] = {};
+//int DataKlimaat::klimaatDataArray[3][15] = {};
+KlimaatDataLogger klimaatDataLogger;
 TouchScreen touchScreen;
 Klok klok;
+
 int bakNummer1 = 0;
 Plantenbak plantenbak1(pinArray1, bakNummer1);
 int bakNummer2 = bakNummer1 + 1;
@@ -759,6 +829,7 @@ void setup() {
     Serial.begin(9600);
     touchScreen.setup();
     klok.setup();
+    klimaatDataLogger.setup();
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
@@ -777,6 +848,10 @@ void loop()
     // Serial.println(klimaatDataNu[1][1]);
     // Serial.println(klimaatDataNu[2][1]);
     touchScreen.toonStartScherm(datumTijd);
+    String klimaatDataString = klimaatDataLogger.maakKlimaatDataString();
+    Serial.println(klimaatDataString);
+    klimaatDataLogger.writeToFile(klimaatDataString);
+    klimaatDataLogger.readFromFile();
     Serial.println();
     delay(3000);
 }
