@@ -40,7 +40,7 @@
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 
-int plantenBakSettings1[3][4][12] = {{{6, 6, 6, 15, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 40, 2, 0, 30, 23, 85}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 0, 0, 0}}, {{84, 240, 236, 15, 35, 14, 70}, {4, 4, 4, 4, 14, 25, 55}, {66, 44, 55, 0, 30, 23, 85}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 40, 6, 15, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {3, 3, 3, 3, 30, 23, 85}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
+int plantenBakSettings1[3][4][12] = {{{12, 40, 10, 20, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 40, 2, 0, 30, 23, 85}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 0, 0, 0}}, {{84, 240, 236, 15, 35, 14, 70}, {15, 30, 4, 4, 14, 25, 55}, {66, 44, 55, 0, 30, 23, 85}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 40, 6, 15, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 50, 6, 18, 30, 23, 85}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 
 byte pinArray1[8] = {A0, 9, A1, 4, 5, 10, 8, 7}; 
 byte pinArray2[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
@@ -123,8 +123,8 @@ class LuchtVochtigheidTemperatuurSensor {
     LuchtVochtigheidTemperatuurSensor(byte myPin) :
         dht(myPin, DHT22) 
         {
-                dht.begin();
-        pin = myPin;
+            dht.begin();
+            pin = myPin;
         }
 
     void initialisatie() {
@@ -134,6 +134,7 @@ class LuchtVochtigheidTemperatuurSensor {
     }
 
     float readTempValue() {
+        delay(500);//drie bakken te snel achterelkaar meten lukt niet meten
         return(dht.readTemperature());
     }
 
@@ -142,13 +143,31 @@ class LuchtVochtigheidTemperatuurSensor {
     }
 };
 
+class DataKlimaat {
+    static int klimaatDataArray[3][15];
+    
+    public:
+    DataKlimaat() 
+    {}
+    void addDataKlimaat(int bak, int tweede, int waarde) {
+        klimaatDataArray[bak][tweede] = waarde;
+    }
+
+    int** geefDataKlimaat() {
+        return (int**)klimaatDataArray;
+    }
+};
+
 class KlimaatRegelaar {
+    DataKlimaat dataKlimaat;
     byte lampenPin1;
     byte lampenPin2;
     byte nevelPin;
     byte ventilatorPin;
+    int plantenBakNummer;
     boolean ventilatorIsAan = false;
     boolean vernevelaarIsAan = false;
+    boolean lampIsAan1 = false;
     boolean lampIsAan2 = false;
     boolean luchtIsDroog = false;
     boolean dag = false;
@@ -156,9 +175,8 @@ class KlimaatRegelaar {
     boolean regen = false;
 
     public:
-    KlimaatRegelaar(byte myLampenPin1, byte myLampenPin2, byte myNevelPin, byte myVentilatorPin) 
-   
-        {
+    KlimaatRegelaar(byte myLampenPin1, byte myLampenPin2, byte myNevelPin, byte myVentilatorPin, int myPlantenBakNummer) {
+        plantenBakNummer = myPlantenBakNummer;
         lampenPin1 = myLampenPin1;
         lampenPin2 = myLampenPin2;
         nevelPin = myNevelPin;
@@ -188,22 +206,21 @@ class KlimaatRegelaar {
         Serial.println();
     }
 
-    void doeJeKlimaatDing(RtcDateTime now, int myPlantenbakNummer) {
-
-        getSettingsNu(now, myPlantenbakNummer);
-        regelLicht(now);
-        
-
-
+    void doeJeKlimaatDing(RtcDateTime now) {
+        Serial.print("plantenBakNummer = ");
+        Serial.println(plantenBakNummer);
+        getSettingsNu(now);
+        regelLicht();
+        regelDauw();
+        regelRegenWolken();
+        regelVochtigheid();
+        regelTemperatuur();
+        standen();
     }
-    void getSettingsNu(RtcDateTime now, int myPlantenbakNummer) {
+    void getSettingsNu(RtcDateTime now) {
 
-        int plantenBakNummer = myPlantenbakNummer;
         //static int klimaatData[3][15];
         int seizoenNu = plantenBakSettings1[plantenBakNummer][3][(now.Month()-1)];
-        Serial.println("seizoenNu = ");
-        Serial.println(seizoenNu);
-        
         int uurNu = now.Second();// terugveranderen naat hour()
         int minuutNu = now.Minute();
         float uurMinuutNu = uurNu + (minuutNu / 60);
@@ -215,10 +232,11 @@ class KlimaatRegelaar {
         
         switch (seizoenNu) {
             case WINTER:
-                Serial.println("case 0");
+                //Serial.println("case 0");
                 for (int i = 0; i < 7; i++) {
                     klimaatDataNu[plantenBakNummer][i] = plantenBakSettings1[plantenBakNummer][WINTER][i];
-                    Serial.println(klimaatDataNu[plantenBakNummer][i]);
+                    dataKlimaat.addDataKlimaat(plantenBakNummer, i, plantenBakSettings1[plantenBakNummer][WINTER][i]);
+                    //Serial.println(klimaatDataNu[plantenBakNummer][i]);
                 }
                 klimaatDataNu[plantenBakNummer][10] = WINTER;
                 break;
@@ -226,7 +244,8 @@ class KlimaatRegelaar {
                 Serial.println("case 1");
                 for (int i = 0; i < 7; i++) {
                     klimaatDataNu[plantenBakNummer][i] = plantenBakSettings1[plantenBakNummer][ZOMER][i];
-                    Serial.println(klimaatDataNu[plantenBakNummer][i]);
+                    dataKlimaat.addDataKlimaat(plantenBakNummer, i, plantenBakSettings1[plantenBakNummer][ZOMER][i]);
+                    //Serial.println(klimaatDataNu[plantenBakNummer][i]);
                 }
                 klimaatDataNu[plantenBakNummer][10] = ZOMER;
                 break;
@@ -234,7 +253,8 @@ class KlimaatRegelaar {
                 Serial.println("case 2");
                 for (int i = 0; i < 7; i++) {
                     klimaatDataNu[plantenBakNummer][i] = plantenBakSettings1[plantenBakNummer][REGEN][i];
-                    Serial.println(klimaatDataNu[plantenBakNummer][i]);
+                    dataKlimaat.addDataKlimaat(plantenBakNummer, i, plantenBakSettings1[plantenBakNummer][REGEN][i]);
+                    //Serial.println(klimaatDataNu[plantenBakNummer][i]);
                 }
                 klimaatDataNu[plantenBakNummer][10] = REGEN;
                 break;
@@ -261,192 +281,169 @@ class KlimaatRegelaar {
                 isRegen = false;
             }
         klimaatDataNu[plantenBakNummer][9] = isRegen;
-        Serial.print("getal in getsettings =" );
-        Serial.println(klimaatDataNu[plantenBakNummer][1]);
+        // Serial.print("getal in getsettings =" );
+        // Serial.println(klimaatDataNu[plantenBakNummer][1]);
     }
 
-    void regelLicht(int plantenBakNummer) {
+    void regelLicht() {
             
         if (!dag && klimaatDataNu[plantenBakNummer][ISDAG]) {
             digitalWrite(lampenPin1, HIGH);
             digitalWrite(lampenPin2, HIGH);
             Serial.println("Lampen aangeschakeld");
             lampIsAan2 = true;
-            dag = true;
+            lampIsAan1 = true;
         }
         if (dag && !klimaatDataNu[plantenBakNummer][ISDAG]) {
             digitalWrite(lampenPin1, LOW); 
             digitalWrite(lampenPin2, LOW); 
             Serial.println("Lampen uitgeschakeld"); 
             lampIsAan2 = false;
-            dag = false;
         }
     }
 
-    // void regelRegenWolken(int plantenBakNummer) {
+    void regelRegenWolken() {
 
-    //     if (!regen && klimaatDataNu[plantenBakNummer][ISREGEN] && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < 100) {
-    //         if (!vernevelaarIsAan && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
-    //             digitalWrite(nevelPin, HIGH);
-    //             Serial.println("vernevelaar aan (regenwolken)");
-    //             vernevelaarIsAan = true;
-    //             regen = true;
-    //         }    
-    //         if (lampIsAan2) {
-    //             digitalWrite(lampenPin2, LOW);
-    //             Serial.println("lampen2 is uit (regenwolken)");
-    //             lampIsAan2 = false;
-    //         }
-    //     }
+        if (!regen && klimaatDataNu[plantenBakNummer][ISREGEN] && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < 100) {
+            if (!vernevelaarIsAan && (klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.println("vernevelaar aan (regenwolken)");
+                vernevelaarIsAan = true;
+                regen = true;
+            }    
+            if (lampIsAan2) {
+                digitalWrite(lampenPin2, LOW);
+                Serial.println("lampen2 uit (regenwolken)");
+                lampIsAan2 = false;
+            }
+        }
 
-    //     if (!klimaatDataNu[plantenBakNummer][ISREGEN]||klimaatDataNu[plantenBakNummer][ISREGEN] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
-    //         regen = false;
-    //         if (vernevelaarIsAan && luchtVochtigheid > settings[LUCHTVOCHTIGHEID]) {
-    //             digitalWrite(nevelPin, LOW); 
-    //             Serial.println("vernevelaar uit (regenwolken)"); 
-    //             vernevelaarIsAan = false;
-    //         }  
-    //         if (!lampIsAan2 && klimaatDataNu[plantenBakNummer][ISDAG]) {
-    //             digitalWrite(lampenPin2, HIGH); 
-    //             Serial.println("lampen2 aan (regenwolken)"); 
-    //             lampIsAan2 = true;
-    //         }
-    //     }
-    // }
+        if (regen && (!klimaatDataNu[plantenBakNummer][ISREGEN]||klimaatDataNu[plantenBakNummer][TEMPERATUUR] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+            regen = false;
+            if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID]) {
+                digitalWrite(nevelPin, LOW); 
+                Serial.println("vernevelaar uit (regenwolken)"); 
+                vernevelaarIsAan = false;
+            }  
+            if (!lampIsAan2 && klimaatDataNu[plantenBakNummer][ISDAG]) {
+                digitalWrite(lampenPin2, HIGH); 
+                Serial.println("lampen2 aan (regenwolken)"); 
+                lampIsAan2 = true;
+            }
+        }
+    }
     
-    // void regelDauw() {
-    //     if (dauw && klimaatDataNu[plantenBakNummer][ISDAUW]) {
-    //         if (!vernevelaarIsAan && temperatuur < settings[NACHTTEMPERATUUR]) {
-    //             digitalWrite(nevelPin, HIGH);
-    //             Serial.println("vernevelaar aan (dauw)");
-    //             vernevelaarIsAan = true;
-    //             dauw = true;
-    //             }    
-    //         if (!ventilatorIsAan) {
-    //             digitalWrite(ventilatorPin, HIGH);
-    //             Serial.println("ventilator aan (dauw)");
-    //             ventilatorIsAan = true;
-    //             }
-    //     }
+    void regelDauw() {
+        if (!dauw && klimaatDataNu[plantenBakNummer][ISDAUW]) {
+            if (!vernevelaarIsAan && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.println("vernevelaar aan (dauw)");
+                vernevelaarIsAan = true;
+                dauw = true;
+                }    
+            if (!ventilatorIsAan && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+                digitalWrite(ventilatorPin, HIGH);
+                Serial.println("ventilator aan (dauw)");
+                ventilatorIsAan = true;
+                }
+        }
 
-    //     if (dauw && klimaatDataNu[plantenBakNummer][ISDAUW]|| temperatuur < settings[NACHTTEMPERATUUR])) {
-    //         if (vernevelaarIsAan && luchtVochtigheid > settings[LUCHTVOCHTIGHEID]) {
-    //             digitalWrite(nevelPin, LOW); 
-    //             Serial.println("vernevelaar uit (dauw)"); 
-    //             vernevelaarIsAan = false;
-    //         }  
-    //         if (ventilatorIsAan) {
-    //             digitalWrite(ventilatorPin, LOW); 
-    //             Serial.println("ventilator uit (dauw)"); 
-    //             ventilatorIsAan = false;
-    //         }
-    //         isDauw = false;
-    //     }
-    // }
+        if (dauw && (klimaatDataNu[plantenBakNummer][ISDAUW]|| klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+            if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID]) {
+                digitalWrite(nevelPin, LOW); 
+                Serial.println("vernevelaar uit (dauw)"); 
+                vernevelaarIsAan = false;
+            }  
+            if (ventilatorIsAan) {
+                digitalWrite(ventilatorPin, LOW); 
+                Serial.println("ventilator uit (dauw)"); 
+                ventilatorIsAan = false;
+            }
+            dauw = false;
+        }
+    }
 
-    // void regelVochtigheid(float temperatuur, float luchtVochtigheid, float settings[]) {
+    void regelVochtigheid() {
 
-    //     if (luchtVochtigheid < settings[LUCHTVOCHTIGHEID] && temperatuur > settings[NACHTTEMPERATUUR]) {
-    //         luchtIsDroog = true;
-    //         if (!vernevelaarIsAan) {
-    //             digitalWrite(nevelPin, HIGH);
-    //             Serial.println("vernevelaar aan (luchtvochtigheid)");
-    //             vernevelaarIsAan = true;
-    //         } 
-    //     }
-    //     if (vernevelaarIsAan && !isDauw && !isRegenWolk && (luchtVochtigheid > settings[LUCHTVOCHTIGHEID] || temperatuur < settings[NACHTTEMPERATUUR])) {
-    //         digitalWrite(nevelPin, LOW);
-    //         Serial.print("vernevelaar uit (luchtvochtigheid)");
-    //         vernevelaarIsAan = false;
-    //     }
-    //     if (luchtVochtigheid > settings[LUCHTVOCHTIGHEID] ) { 
-    //         luchtIsDroog = false;
-    //     }
-    //     if (vernevelaarIsAan && luchtVochtigheid > 100) {
-    //         digitalWrite(nevelPin, LOW);
-    //         Serial.print("vernevelaar uit (luchtvochtigheid)");
-    //         vernevelaarIsAan = false;
-    //     }
-    // }
+        if (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+            luchtIsDroog = true;
+            if (!vernevelaarIsAan) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.println("vernevelaar aan (luchtvochtigheid)");
+                vernevelaarIsAan = true;
+            } 
+        }
+        if (vernevelaarIsAan && !dauw && !regen && (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU]  > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] || klimaatDataNu[plantenBakNummer][TEMPERATUUR] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+            digitalWrite(nevelPin, LOW);
+            Serial.print("vernevelaar uit (luchtvochtigheid)");
+            vernevelaarIsAan = false;
+        }
+        if (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] ) { 
+            luchtIsDroog = false;
+        }
+        if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > 100) {
+            digitalWrite(nevelPin, LOW);
+            Serial.print("vernevelaar uit (luchtvochtigheid)");
+            vernevelaarIsAan = false;
+        }
+    }
 
-    // void regelTemperatuur(float temperatuur, float settings[]){
+    void regelTemperatuur(){
 
-    //     if (temperatuur > settings[DAGTEMPERATUUR]) {
-    //         if (!ventilatorIsAan) {
-    //             digitalWrite(ventilatorPin, HIGH);
-    //             Serial.print("vernevelaar aan (temperatuur)");
-    //             ventilatorIsAan = true;
-    //         }
-    //         if (lampIsAan2) {
-    //             digitalWrite(lampenPin2, LOW);
-    //             Serial.println("lampen2 is uit (temperatuur)");
-    //             lampIsAan2 = false;
-    //         }
-    //         if (!vernevelaarIsAan) {
-    //             digitalWrite(nevelPin, HIGH);
-    //             Serial.print("vernevelaar aan (temperatuur)");
-    //             vernevelaarIsAan = false;
-    //         }
-    //     }
-    //     if (temperatuur < settings[DAGTEMPERATUUR]) {
-    //         if (ventilatorIsAan && !isDauw) {
-    //             digitalWrite(ventilatorPin, LOW);
-    //             Serial.print("vernevelaar uit (temperatuur)");
-    //             ventilatorIsAan = false;
-    //         }
-    //         if (!lampIsAan2 && !isRegenWolk && isDag) {
-    //             digitalWrite(lampenPin2, HIGH);
-    //             Serial.println("lampen2 aan (temperatuur)");
-    //             lampIsAan2 = true;
-    //         }
-    //         if (vernevelaarIsAan && !isDauw && !isRegenWolk && !luchtIsDroog) {
-    //             digitalWrite(nevelPin, LOW);
-    //             Serial.print("vernevelaar uit (temperatuur)");
-    //             vernevelaarIsAan = false;
-    //         }
-    //     }
-    // }
+        if (klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][DAGTEMPERATUUR]) {
+            if (!ventilatorIsAan) {
+                digitalWrite(ventilatorPin, HIGH);
+                Serial.print("vernevelaar aan (temperatuur)");
+                ventilatorIsAan = true;
+            }
+            if (lampIsAan2) {
+                digitalWrite(lampenPin2, LOW);
+                Serial.println("lampen2 uit (temperatuur)");
+                lampIsAan2 = false;
+            }
+            if (!vernevelaarIsAan) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.print("vernevelaar aan (temperatuur)");
+                vernevelaarIsAan = true;
+            }
+        }
+        if (klimaatDataNu[plantenBakNummer][TEMPERATUUR] < klimaatDataNu[plantenBakNummer][DAGTEMPERATUUR]) {
+            if (ventilatorIsAan && !dauw) {
+                digitalWrite(ventilatorPin, LOW);
+                Serial.print("vernevelaar uit (temperatuur)");
+                ventilatorIsAan = false;
+            }
+            if (!lampIsAan2 && !regen && dag) {
+                digitalWrite(lampenPin2, HIGH);
+                Serial.println("lampen2 aan (temperatuur)");
+                lampIsAan2 = true;
+            }
+            if (vernevelaarIsAan && !dauw && !regen && !luchtIsDroog) {
+                digitalWrite(nevelPin, LOW);
+                Serial.print("vernevelaar uit (temperatuur)");
+                vernevelaarIsAan = false;
+            }
+        }
+    }
 
-    // void standen(float temperatuur, float luchtVochtigheid, float pot, float licht, float settings[]) {
+    void standen() {
+        Serial.print("plantenBakNummer = " );
+        Serial.println(plantenBakNummer);
+        Serial.print("isDag = ");
+        Serial.println(dag);
+        Serial.print("vernevelaarIsAan = ");
+        Serial.println(vernevelaarIsAan);
+        Serial.print("isDauw = ");
+        Serial.println(dauw);
+        Serial.print("ventilatorIsAan = ");
+        Serial.println(ventilatorIsAan);
+        Serial.print("isRegenWolk = ");
+        Serial.println(regen);
+        Serial.print("lampenAan2 = ");
+        Serial.println(lampIsAan2);
+        Serial.print("luchtIsDroog = ");
+        Serial.println(luchtIsDroog);
         
-    //     String standen[9]; 
-    //     Serial.print("isDag = ");
-    //     Serial.println(isDag);
-    //     Serial.print("vernevelaarIsAan = ");
-    //     Serial.println(vernevelaarIsAan);
-    //     Serial.print("isDauw = ");
-    //     Serial.println(isDauw);
-    //     Serial.print("ventilatorIsAan = ");
-    //     Serial.println(ventilatorIsAan);
-    //     Serial.print("isRegenWolk = ");
-    //     Serial.println(isRegenWolk);
-    //     Serial.print("lampenAan2 = ");
-    //     Serial.println(lampIsAan2);
-    //     Serial.print("luchtIsDroog = ");
-    //     Serial.println(luchtIsDroog);
-        
-    // }
-};
-
-class ArrayTransport {
-    
-    int array[][][];
-    int a;
-    int b;
-    int c;  
-
-// int a[17];
-// size_t n = sizeof(a)/sizeof(a[0]);
-
-    public:
-    ArrayTransport()
-    {}
-
-    voegMeetWaardesToeAanArray(int addition[][]) {
-        a = 
-        for (int eerste = 0; eerste < (eerste+1); eerste++)
-        if (array[eerste][b][c] = !null)
-        array[eerste][b][c] = 
     }
 };
 
@@ -610,7 +607,7 @@ class Plantenbak {
         soilHumiditySensor(myPins[0], myPins[1]),
         lichtSensor(myPins[2]),
         luchtVochtigheidTemperatuurSensor(myPins[6]),
-        klimaatRegelaar(myPins[3] , myPins[7], myPins[5], myPins[4]),
+        klimaatRegelaar(myPins[3] , myPins[7], myPins[5], myPins[4], myPlantenBakNummer),
         plantenBakNummer(myPlantenBakNummer)
     {
     }
@@ -643,13 +640,13 @@ class Plantenbak {
         int potVochtigheid = soilHumiditySensor.readValue();
         klimaatDataNu[platenBakNummer][POTVOCHTIGHEID] = potVochtigheid;
         Serial.println(soilHumiditySensor.readValue());
-        Serial.print("Raw = ");
-        Serial.print(lichtSensor.readRawValue());
+        // Serial.print("Raw = ");
+        // Serial.print(lichtSensor.readRawValue());
         Serial.print(" - Lux = ");
         int licht = lichtSensor.readLogValue();
         klimaatDataNu[platenBakNummer][LICHT] = licht;
         Serial.println(lichtSensor.readLogValue());
-        klimaatRegelaar.doeJeKlimaatDing(myTime, plantenBakNummer);
+        klimaatRegelaar.doeJeKlimaatDing(myTime);
     }  
 };
 
@@ -748,7 +745,7 @@ class TouchScreen {
     }
 };
 
-
+int DataKlimaat::klimaatDataArray[3][15] = {};
 TouchScreen touchScreen;
 Klok klok;
 int bakNummer1 = 0;
@@ -776,10 +773,9 @@ void loop()
     plantenbak1.regelKlimaat(tijd, bakNummer1);
     plantenbak2.regelKlimaat(tijd, bakNummer2);
     plantenbak3.regelKlimaat(tijd, bakNummer3);
-    
-    Serial.println(klimaatDataNu[0][1]);
-    Serial.println(klimaatDataNu[1][1]);
-    Serial.println(klimaatDataNu[2][1]);
+    // Serial.println(klimaatDataNu[0][1]);
+    // Serial.println(klimaatDataNu[1][1]);
+    // Serial.println(klimaatDataNu[2][1]);
     touchScreen.toonStartScherm(datumTijd);
     Serial.println();
     delay(3000);
