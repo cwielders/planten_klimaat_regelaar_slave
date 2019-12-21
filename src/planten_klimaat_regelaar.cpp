@@ -452,9 +452,12 @@ class KlimaatRegelaar {
 class Klok {
     
     RtcDS3231<TwoWire> Rtc;
+    KlimaatDataLogger klimaatDataLoggerKlok;
     
     public:
-    Klok(): Rtc(Wire)
+    Klok() : 
+        Rtc(Wire),
+        klimaatDataLoggerKlok()
     { }
 
     String setup () {
@@ -552,7 +555,7 @@ class Klok {
         }
 
         RtcDateTime now = Rtc.GetDateTime();
-        Serial.print("Dit is de loop tijd ");
+        Serial.println("Dit is de loop tijd ");
         printDateTime(now);
         Serial.println();
 
@@ -671,6 +674,7 @@ class KlimaatDataLogger {
     File myFile;
     int csPin = 53;
     String naamFile = "datafile.txt";
+    Static vector<int> klimaatGevens;
 
     public:
     KlimaatDataLogger() :
@@ -767,6 +771,9 @@ class TouchScreen {
         myGLCD.setFont(BigFont);
         myTouch.InitTouch();
         myTouch.setPrecision(PREC_MEDIUM);
+    // currentPage = '0'; // Indicates that we are at Home Screen
+    // selectedUnit = '0'; // Indicates the selected unit for the first example, cms or inches
+
     }
 
     void toonStartScherm(String myDatumTijd) {
@@ -793,26 +800,26 @@ class TouchScreen {
             myGLCD.setColor(VGA_WHITE);
             myGLCD.drawRoundRect (2, (i*71) + 5, 315, (i*71) + 70);
             myGLCD.setFont(SmallFont);
-            myGLCD.print(String("Temperature"), 11, (i*71) +5);
-            myGLCD.print(String("Humidity"), 11, (i*71) + 38);
-            myGLCD.print(String("Soilmoisture"), 150, (i*71) + 5);
-            myGLCD.print(String("Light"),150, (i*71) + 38);
-            myGLCD.print(String(klimaatDataNu[i][NACHTTEMPERATUUR]) + "/", 11, (i*71) + 20);
+            myGLCD.print(String("Temperature"), 11, (i*71) +6);
+            myGLCD.print(String("Humidity"), 11, (i*71) + 39);
+            myGLCD.print(String("Soilmoisture"), 150, (i*71) + 6);
+            myGLCD.print(String("Light"),150, (i*71) + 39);
+            myGLCD.print(String(klimaatDataNu[i][NACHTTEMPERATUUR]) + "/", 11, (i*71) + 21);
             //myGLCD.drawLine(1,31, 315, 31);
-            myGLCD.print(String("/") + String(klimaatDataNu[i][DAGTEMPERATUUR]), 90, (i*71) + 20);
-            myGLCD.print(String("/") + String(klimaatDataNu[i][LUCHTVOCHTIGHEID]), 59, (i*71) + 52);
+            myGLCD.print(String("/") + String(klimaatDataNu[i][DAGTEMPERATUUR]), 90, (i*71) + 21);
+            myGLCD.print(String("/") + String(klimaatDataNu[i][LUCHTVOCHTIGHEID]), 59, (i*71) + 53);
             myGLCD.setColor(VGA_YELLOW);
             
             if(klimaatDataNu[i][ISDAUW] == 1) {
                 myGLCD.print(String("Dew"), 265, (i*751) + 21);
             }
             if(klimaatDataNu[i][ISREGEN] == 1) {
-                myGLCD.print(String("Rain"), 265, (i*71) + 38);
+                myGLCD.print(String("Rain"), 265, (i*71) + 39);
             }
             if(klimaatDataNu[i][ISDAG] == 1) {
-                myGLCD.print(String("Day"), 265, (i*71) + 5);
+                myGLCD.print(String("Day"), 265, (i*71) + 6);
             }   else {
-                myGLCD.print(String("Night"), 265, (i*71) + 5);
+                myGLCD.print(String("Night"), 265, (i*71) + 6);
             }
             if (klimaatDataNu[i][SEIZOEN] == WINTER) {
                 myGLCD.print(String("Winter"), 265, (i*71) + 55);
@@ -824,13 +831,13 @@ class TouchScreen {
                 myGLCD.print(String("Wet"), 265, (i*71) + 55);
             }
             myGLCD.setFont(BigFont);
-            myGLCD.print(String(klimaatDataNu[i][TEMPERATUUR]), 35, (i*71) + 17);
-            myGLCD.print(String("C"), 75, (i*71) + 17);
-            myGLCD.print(String(klimaatDataNu[i][LUCHTVOCHTIGHEIDNU]) + "%", 11, (i*71) + 50);
-            myGLCD.print(String(klimaatDataNu[i][POTVOCHTIGHEID]) , 150, (i*71) + 17);
-            myGLCD.print(String(klimaatDataNu[i][LICHT]), 150, (i*71) + 50);
+            myGLCD.print(String(klimaatDataNu[i][TEMPERATUUR]), 35, (i*71) + 18);
+            myGLCD.print(String("C"), 75, (i*71) + 18);
+            myGLCD.print(String(klimaatDataNu[i][LUCHTVOCHTIGHEIDNU]) + "%", 11, (i*71) + 51);
+            myGLCD.print(String(klimaatDataNu[i][POTVOCHTIGHEID]) , 150, (i*71) + 18);
+            myGLCD.print(String(klimaatDataNu[i][LICHT]), 150, (i*71) + 51);
             myGLCD.setColor(VGA_YELLOW);
-            myGLCD.fillCircle(73, (i*71) +19, 2);
+            myGLCD.fillCircle(73, (i*71) + 19, 2);
         }
         myGLCD.setColor(VGA_WHITE);
         myGLCD.setBackColor(VGA_BLACK);
@@ -839,36 +846,73 @@ class TouchScreen {
         delay(9000);
     }
 
-    void waitForIt(int x1, int y1, int x2, int y2) {
-        myGLCD.setColor(255, 0, 0);
-        myGLCD.drawRoundRect (x1, y1, x2, y2);
-        while (myTouch.dataAvailable())
-            myTouch.read();
-        myGLCD.setColor(255, 255, 255);
-        myGLCD.drawRoundRect (x1, y1, x2, y2);
+void updateStr(int val)
+{
+  if (stCurrentLen<20)
+  {
+    stCurrent[stCurrentLen]=val;
+    stCurrent[stCurrentLen+1]='\0';
+    stCurrentLen++;
+    myGLCD.setColor(0, 255, 0);
+    myGLCD.print(stCurrent, LEFT, 224);
+  }
+  else
+  {
+    myGLCD.setColor(255, 0, 0);
+    myGLCD.print("BUFFER FULL!", CENTER, 192);
+    delay(500);
+    myGLCD.print("            ", CENTER, 192);
+    delay(500);
+    myGLCD.print("BUFFER FULL!", CENTER, 192);
+    delay(500);
+    myGLCD.print("            ", CENTER, 192);
+    myGLCD.setColor(0, 255, 0);
+  }
+}
+
+// Draw a red frame while a button is touched
+void waitForIt(int x1, int y1, int x2, int y2)
+{
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.drawRoundRect (x1, y1, x2, y2);
+  while (myTouch.dataAvailable())
+    myTouch.read();
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.drawRoundRect (x1, y1, x2, y2);
     }
 
+    void drawFrame(int x1, int y1, int x2, int y2) {
+        myGLCD.setColor(VGA_YELLOW);
+        myGLCD.drawRoundRect (x1, y1, x2, y2);
+        while (myTouch.dataAvailable()==true) {}
+            myTouch.read();
+            myGLCD.setColor(VGA_GREEN);
+            myGLCD.drawRoundRect (x1, y1, x2, y2);
+        
+    }
+ 
     void kiesPlantenBak() {
         if (myTouch.dataAvailable()) {
             myTouch.read();
             x=myTouch.getX();
             y=myTouch.getY();
-            
+            // myGLCD.drawRoundRect (2, (i*71) + 5, 315, (i*71) + 70);
             if ((y>=10) && (y<=70)) { // bovenste bak
-                waitForIt(10, 10, 60, 60);
+                waitForIt(2, 5, 315, 70);
             }
             if ((y>=73) && (y<=143)) {// middelste bak
-                waitForIt(70, 10, 120, 60);
+                waitForIt(2, 76, 315, 141);
             }
             if ((y>=130) && (y<=180)) { // Button: 3
-                waitForIt(130, 10, 180, 60);
+                waitForIt(2, 142, 315, 212);
             }
         }
     }
-
 };
 
-//int DataKlimaat::klimaatDataArray[3][15] = {};
+KlimaatDataLogger klimaatDataLogger;
+vector<int> KlimaatDataLogger::klimaatGevens;
+
 KlimaatDataLogger klimaatDataLogger;
 TouchScreen touchScreen;
 Klok klok;
@@ -888,27 +932,39 @@ void setup() {
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
-    
 }
 
-void loop()
-{
-    
+void loop() {
     RtcDateTime tijd = klok.getTime();
-    String datumTijd = klok.geefDatumTijdString(tijd);
-
     plantenbak1.regelKlimaat(tijd, bakNummer1);
     plantenbak2.regelKlimaat(tijd, bakNummer2);
     plantenbak3.regelKlimaat(tijd, bakNummer3);
     // Serial.println(klimaatDataNu[0][1]);
     // Serial.println(klimaatDataNu[1][1]);
     // Serial.println(klimaatDataNu[2][1]);
+    String datumTijd = klok.geefDatumTijdString(tijd);
     touchScreen.toonStartScherm(datumTijd);
-    String klimaatDataString = klimaatDataLogger.maakKlimaatDataString();
-    Serial.println(klimaatDataString);
-    klimaatDataLogger.writeToFile(klimaatDataString);
-    klimaatDataLogger.readFromFile();
+    
+    int minuut = tijd.Minute();
+    Serial.println(minuut);
+    int minuutNu = tijd.Minute();
+    while ((minuutNu - minuut) < 1) {
+        Serial.print("minuutNu in while loop =");
+        Serial.println(minuutNu);
+        Serial.println(minuutNu - minuut);
+        touchScreen.kiesPlantenBak();
+        Serial.println("while loop!!!!!!");
+        RtcDateTime nieuweTijd = klok.getTime();
+        minuutNu = nieuweTijd.Minute();
+        Serial.println(minuutNu);
+        Serial.println(minuutNu - minuut);
+        
+    }
+    // String klimaatDataString = klimaatDataLogger.maakKlimaatDataString();
+    //Serial.println(klimaatDataString);
+    // klimaatDataLogger.writeToFile(klimaatDataString);
+    // klimaatDataLogger.readFromFile();
     Serial.println();
-    delay(3000);
+    
 }
 
