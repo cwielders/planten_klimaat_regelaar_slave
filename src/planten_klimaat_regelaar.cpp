@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <Wire.h> // must be included here so that Arduino library object file references work
+#include <Wire.h> // must be included here so that Arduino library object file references work (clock)
 #include <RtcDS3231.h>
 
 #include <SD.h>
@@ -10,26 +10,36 @@
 #include <UTFT.h>
 #include <URTouch.h>
 #include <UTFT_Buttons.h>                                                                  
-//Volgende twee regels zijn crusiaal voor touch display MAAR NIET VOOR BUTTONS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//#define YM 23 // can be a digital pin
-//#define XP 22 // can be a digital pin
 
 #define STARTDAG 0
 #define EINDDAG 1
-#define DUURDAUW 2
-#define DUURREGEN 3
-#define DAGTEMPERATUUR 4
-#define NACHTTEMPERATUUR 5
-#define LUCHTVOCHTIGHEID 6
-#define ISDAG 7
-#define ISDAUW 8
-#define ISREGEN 9
+#define DAGTEMPERATUUR 2
+#define NACHTTEMPERATUUR 3
+#define LUCHTVOCHTIGHEID 4
+#define DUURDAUW 5
+#define DUURREGEN 6
+#define STARTDAUW 7
+
+#define STARTREGEN 8
+#define EINDREGEN 9
 #define SEIZOEN 10
-#define SEIZOEN 10
-#define TEMPERATUUR 11
-#define LUCHTVOCHTIGHEIDNU 12
-#define POTVOCHTIGHEID 13
-#define LICHT 14
+#define ISDAG 11
+#define ISREGEN 12
+#define ISDAUW 13
+#define VENTILATOR 14
+#define VERNEVELAAR 15
+#define TEMPERATUUR 16
+#define LUCHTVOCHTIGHEIDNU 17
+#define POTVOCHTIGHEID 18
+#define LICHT 19
+#define LAMPENAAN1 20
+#define LAMPENAAN2 21
+#define JAAR 22
+#define MAAND 23
+#define DAG 24
+#define UUR 25
+#define MINUUT 26
+#define PLANTENBAKNUMMER 28
 
 #define WINTER 0
 #define ZOMER 1
@@ -42,13 +52,13 @@
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 
-int plantenBakSettings1[3][4][12] = {{{12, 40, 10, 20, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 40, 2, 0, 30, 23, 85}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 0, 0, 0}}, {{84, 240, 236, 15, 35, 14, 70}, {15, 30, 4, 4, 14, 25, 55}, {66, 44, 55, 0, 30, 23, 85}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 40, 6, 15, 35, 14, 70}, {8, 40, 1, 0, 14, 25, 55}, {8, 50, 6, 18, 30, 23, 85}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
+int plantenBakSettings1[3][4][12] = {{{8, 21, 20, 14, 4, 0, 70}, {8, 22, 30, 20, 4, 1, 55}, {8, 23, 35, 30, 4, 5, 85}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 0, 0, 0}}, {{8, 21, 20, 14, 4, 0, 70}, {8, 22, 30, 20, 4, 1, 55}, {8, 23, 35, 30, 4, 5, 85}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70}, {8, 22, 30, 20, 4, 1, 55}, {8, 23, 35, 30, 4, 5, 85}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 
 byte pinArray1[8] = {A0, 9, A1, 4, 5, 10, 8, 7}; 
 byte pinArray2[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
 byte pinArray3[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
 
-int klimaatDataNu[3][15];
+int klimaatDataNu[3][29];
 
 class LichtSensor {
 
@@ -98,22 +108,20 @@ class SoilHumiditySensor {
     }
 
     void initialisatie() {
-            Serial.println("SoilHumiditySensor geinitialiseerd");
-            Serial.print("SoilHumiditySensorPin = ");
-            Serial.println(pin);
-            Serial.print("SoilHumiditySensorPowerPin = ");
-            Serial.println(powerPin);
+        Serial.println("SoilHumiditySensor geinitialiseerd");
+        Serial.print("SoilHumiditySensorPin = ");
+        Serial.println(pin);
+        Serial.print("SoilHumiditySensorPowerPin = ");
+        Serial.println(powerPin);
     }
-    // read the raw value from the soil sensor:
     
     float readValue() {
-        digitalWrite(powerPin, HIGH);//turn D2 "On"
-        delay(10);//wait 10 milliseconds 
-        float soilmoisture = analogRead(pin);//Read the SIG value form sensor 
-        digitalWrite(powerPin, LOW);//turn D7 "Off"
+        digitalWrite(powerPin, HIGH);
+        delay(10);
+        float soilmoisture = analogRead(pin);
+        digitalWrite(powerPin, LOW);
         return(soilmoisture);
     } 
-
 };
 
 class LuchtVochtigheidTemperatuurSensor {
@@ -145,23 +153,8 @@ class LuchtVochtigheidTemperatuurSensor {
     }
 };
 
-class DataKlimaat {
-    int klimaatDataArray[3][15];
-    
-    public:
-    DataKlimaat() 
-    {}
-    void addDataKlimaat(int bak, int tweede, int waarde) {
-        klimaatDataArray[bak][tweede] = waarde;
-    }
-
-    int** geefDataKlimaat() {
-        return (int**)klimaatDataArray;
-    }
-};
-
 class KlimaatRegelaar {
-    DataKlimaat dataKlimaat;
+    
     byte lampenPin1;
     byte lampenPin2;
     byte nevelPin;
@@ -192,7 +185,6 @@ class KlimaatRegelaar {
         pinMode(ventilatorPin, OUTPUT);
         digitalWrite(nevelPin, LOW);
         digitalWrite(ventilatorPin, LOW);
-        // lampenaan, lampenuit, dauwaan, dauwuit, dag temperatuur, nacht temperatuur, dag vochtigheid, nacht vochtigheid, bewolkingaan, bewolkinguit)
         }
 
     void initialisatie() {
@@ -220,9 +212,13 @@ class KlimaatRegelaar {
         standen();
     }
     void getSettingsNu(RtcDateTime now) {
-
-        //static int klimaatData[3][15];
         int seizoenNu = plantenBakSettings1[plantenBakNummer][3][(now.Month()-1)];
+        klimaatDataNu[plantenBakNummer][JAAR] = now.Year();
+        klimaatDataNu[plantenBakNummer][MAAND] = now.Month();
+        klimaatDataNu[plantenBakNummer][DAG] = now.Day();
+        klimaatDataNu[plantenBakNummer][UUR] = now.Hour();
+        klimaatDataNu[plantenBakNummer][MINUUT] = now.Minute();
+        klimaatDataNu[plantenBakNummer][PLANTENBAKNUMMER] = plantenBakNummer;
         int uurNu = now.Second();// terugveranderen naat hour()
         int minuutNu = now.Minute();
         float uurMinuutNu = uurNu + (minuutNu / 60);
@@ -234,31 +230,24 @@ class KlimaatRegelaar {
         
         switch (seizoenNu) {
             case WINTER:
-                //Serial.println("case 0");
                 for (int i = 0; i < 7; i++) {
                     klimaatDataNu[plantenBakNummer][i] = plantenBakSettings1[plantenBakNummer][WINTER][i];
-                    dataKlimaat.addDataKlimaat(plantenBakNummer, i, plantenBakSettings1[plantenBakNummer][WINTER][i]);
-                    //Serial.println(klimaatDataNu[plantenBakNummer][i]);
                 }
-                klimaatDataNu[plantenBakNummer][10] = WINTER;
+                klimaatDataNu[plantenBakNummer][SEIZOEN] = WINTER;
                 break;
             case ZOMER:
                 Serial.println("case 1");
                 for (int i = 0; i < 7; i++) {
                     klimaatDataNu[plantenBakNummer][i] = plantenBakSettings1[plantenBakNummer][ZOMER][i];
-                    dataKlimaat.addDataKlimaat(plantenBakNummer, i, plantenBakSettings1[plantenBakNummer][ZOMER][i]);
-                    //Serial.println(klimaatDataNu[plantenBakNummer][i]);
-                }
-                klimaatDataNu[plantenBakNummer][10] = ZOMER;
+            }
+                klimaatDataNu[plantenBakNummer][SEIZOEN] = ZOMER;
                 break;
             case REGEN:
                 Serial.println("case 2");
                 for (int i = 0; i < 7; i++) {
                     klimaatDataNu[plantenBakNummer][i] = plantenBakSettings1[plantenBakNummer][REGEN][i];
-                    dataKlimaat.addDataKlimaat(plantenBakNummer, i, plantenBakSettings1[plantenBakNummer][REGEN][i]);
-                    //Serial.println(klimaatDataNu[plantenBakNummer][i]);
                 }
-                klimaatDataNu[plantenBakNummer][10] = REGEN;
+                klimaatDataNu[plantenBakNummer][SEIZOEN] = REGEN;
                 break;
         }       
         
@@ -267,56 +256,66 @@ class KlimaatRegelaar {
         }   else {
                 isDag = false;
             }
-        klimaatDataNu[plantenBakNummer][7] = isDag;
+        klimaatDataNu[plantenBakNummer][ISDAG] = isDag;
         float startDauw = klimaatDataNu[plantenBakNummer][STARTDAG] - klimaatDataNu[plantenBakNummer][DUURDAUW];
+        klimaatDataNu[plantenBakNummer][STARTDAUW] = startDauw;
         if (uurMinuutNu >= startDauw && uurMinuutNu <= klimaatDataNu[plantenBakNummer][STARTDAG]) {
             isDauw = true;
         }   else {
                 isDauw = false;
             }
-        klimaatDataNu[plantenBakNummer][8] = isDauw;
+        klimaatDataNu[plantenBakNummer][ISDAUW] = isDauw;
         float startBewolking = ((klimaatDataNu[plantenBakNummer][STARTDAG] + klimaatDataNu[plantenBakNummer][EINDDAG]) / 2) - (klimaatDataNu[plantenBakNummer][DUURREGEN] / 2);
         float eindBewolking = startBewolking + klimaatDataNu[plantenBakNummer][DUURREGEN];
+        klimaatDataNu[plantenBakNummer][STARTREGEN] = startBewolking;
+        klimaatDataNu[plantenBakNummer][EINDREGEN] = eindBewolking;
+        
         if (uurMinuutNu >= startBewolking && uurMinuutNu <= eindBewolking) {
             isRegen = true;
         }   else {
                 isRegen = false;
             }
-        klimaatDataNu[plantenBakNummer][9] = isRegen;
-        // Serial.print("getal in getsettings =" );
-        // Serial.println(klimaatDataNu[plantenBakNummer][1]);
+        klimaatDataNu[plantenBakNummer][ISREGEN] = isRegen;
     }
 
     void regelLicht() {
-            
         if (!dag && klimaatDataNu[plantenBakNummer][ISDAG]) {
             digitalWrite(lampenPin1, HIGH);
             digitalWrite(lampenPin2, HIGH);
             Serial.println("Lampen aangeschakeld");
+            dag = true;
             lampIsAan2 = true;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
             lampIsAan1 = true;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN1] = lampIsAan1;
         }
         if (dag && !klimaatDataNu[plantenBakNummer][ISDAG]) {
             digitalWrite(lampenPin1, LOW); 
             digitalWrite(lampenPin2, LOW); 
-            Serial.println("Lampen uitgeschakeld"); 
+            Serial.println("Lampen uitgeschakeld");
+            dag = false;
             lampIsAan2 = false;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            lampIsAan1 = false;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN1] = lampIsAan1;
         }
     }
 
     void regelRegenWolken() {
-
+        // In volgende regel 100 aanpassen op basis van resultaten
         if (!regen && klimaatDataNu[plantenBakNummer][ISREGEN] && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < 100) {
             if (!vernevelaarIsAan && (klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
                 digitalWrite(nevelPin, HIGH);
                 Serial.println("vernevelaar aan (regenwolken)");
                 vernevelaarIsAan = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
                 regen = true;
             }    
             if (lampIsAan2) {
                 digitalWrite(lampenPin2, LOW);
                 Serial.println("lampen2 uit (regenwolken)");
                 lampIsAan2 = false;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
             }
         }
 
@@ -325,12 +324,15 @@ class KlimaatRegelaar {
             if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID]) {
                 digitalWrite(nevelPin, LOW); 
                 Serial.println("vernevelaar uit (regenwolken)"); 
+                regen = false;
                 vernevelaarIsAan = false;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
             }  
             if (!lampIsAan2 && klimaatDataNu[plantenBakNummer][ISDAG]) {
                 digitalWrite(lampenPin2, HIGH); 
                 Serial.println("lampen2 aan (regenwolken)"); 
                 lampIsAan2 = true;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
             }
         }
     }
@@ -342,11 +344,13 @@ class KlimaatRegelaar {
                 Serial.println("vernevelaar aan (dauw)");
                 vernevelaarIsAan = true;
                 dauw = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
                 }    
             if (!ventilatorIsAan && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
                 digitalWrite(ventilatorPin, HIGH);
                 Serial.println("ventilator aan (dauw)");
                 ventilatorIsAan = true;
+                klimaatDataNu[plantenBakNummer][VENTILATOR] = ventilatorIsAan;
                 }
         }
 
@@ -355,38 +359,47 @@ class KlimaatRegelaar {
                 digitalWrite(nevelPin, LOW); 
                 Serial.println("vernevelaar uit (dauw)"); 
                 vernevelaarIsAan = false;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
             }  
             if (ventilatorIsAan) {
                 digitalWrite(ventilatorPin, LOW); 
                 Serial.println("ventilator uit (dauw)"); 
                 ventilatorIsAan = false;
+                klimaatDataNu[plantenBakNummer][VENTILATOR] = ventilatorIsAan;
             }
-            dauw = false;
+        dauw = false;
         }
     }
 
     void regelVochtigheid() {
 
-        if (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+        if (!luchtIsDroog && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
             luchtIsDroog = true;
             if (!vernevelaarIsAan) {
                 digitalWrite(nevelPin, HIGH);
                 Serial.println("vernevelaar aan (luchtvochtigheid)");
                 vernevelaarIsAan = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
             } 
         }
-        if (vernevelaarIsAan && !dauw && !regen && (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU]  > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] || klimaatDataNu[plantenBakNummer][TEMPERATUUR] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
-            digitalWrite(nevelPin, LOW);
-            Serial.print("vernevelaar uit (luchtvochtigheid)");
-            vernevelaarIsAan = false;
-        }
-        if (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] ) { 
+        if (vernevelaarIsAan && !dauw && !regen && (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU]  > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] || klimaatDataNu[plantenBakNummer][TEMPERATUUR] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR] || klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > 100)) {
             luchtIsDroog = false;
-        }
-        if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > 100) {
             digitalWrite(nevelPin, LOW);
             Serial.print("vernevelaar uit (luchtvochtigheid)");
             vernevelaarIsAan = false;
+            klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
+        }
+        if (luchtIsDroog && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] ) { 
+            luchtIsDroog = false;    
+        }
+        if (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] && klimaatDataNu[plantenBakNummer][TEMPERATUUR] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+            luchtIsDroog = false;
+            if (!ventilatorIsAan) {
+                digitalWrite(ventilatorPin, HIGH);
+                Serial.println("ventilator aan (luchtvochtigheid)");
+                ventilatorIsAan = true;
+                klimaatDataNu[plantenBakNummer][VENTILATOR] = ventilatorIsAan;
+            } 
         }
     }
 
@@ -397,16 +410,19 @@ class KlimaatRegelaar {
                 digitalWrite(ventilatorPin, HIGH);
                 Serial.print("vernevelaar aan (temperatuur)");
                 ventilatorIsAan = true;
+                klimaatDataNu[plantenBakNummer][VENTILATOR] = ventilatorIsAan;
             }
             if (lampIsAan2) {
                 digitalWrite(lampenPin2, LOW);
                 Serial.println("lampen2 uit (temperatuur)");
                 lampIsAan2 = false;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
             }
             if (!vernevelaarIsAan) {
                 digitalWrite(nevelPin, HIGH);
                 Serial.print("vernevelaar aan (temperatuur)");
                 vernevelaarIsAan = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
             }
         }
         if (klimaatDataNu[plantenBakNummer][TEMPERATUUR] < klimaatDataNu[plantenBakNummer][DAGTEMPERATUUR]) {
@@ -414,16 +430,19 @@ class KlimaatRegelaar {
                 digitalWrite(ventilatorPin, LOW);
                 Serial.print("vernevelaar uit (temperatuur)");
                 ventilatorIsAan = false;
+                klimaatDataNu[plantenBakNummer][VENTILATOR] = ventilatorIsAan;
             }
             if (!lampIsAan2 && !regen && dag) {
                 digitalWrite(lampenPin2, HIGH);
                 Serial.println("lampen2 aan (temperatuur)");
                 lampIsAan2 = true;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
             }
             if (vernevelaarIsAan && !dauw && !regen && !luchtIsDroog) {
                 digitalWrite(nevelPin, LOW);
                 Serial.print("vernevelaar uit (temperatuur)");
                 vernevelaarIsAan = false;
+                klimaatDataNu[plantenBakNummer][VERNEVELAAR] = vernevelaarIsAan;
             }
         }
     }
@@ -449,18 +468,95 @@ class KlimaatRegelaar {
     }
 };
 
+class KlimaatDataLogger {
+    
+    File myFile;
+    int csPin = 53;
+    String naamFile = "datafile.txt";
+    
+    public:
+    KlimaatDataLogger() :
+        myFile()
+    {
+        pinMode(53, OUTPUT);
+    }
+
+    void setup() {
+        Serial.begin(9600);
+        Serial.print("Initializing card...");
+        if (!SD.begin(csPin)) {
+            Serial.println("initialization of the SD card failed!");
+            return;
+        }
+        Serial.println("initialization of the SDcard is done.");
+        Serial.print("Creating file named: ");
+        Serial.print(naamFile);
+        myFile = SD.open(naamFile, FILE_WRITE);
+    }
+    
+    void writeToFile(String data) {
+        myFile = SD.open(naamFile, FILE_WRITE);
+        if (myFile) {
+            myFile.println(data);
+            int size = myFile.size();
+            Serial.print("FileSize = ");
+            Serial.println(size);
+            myFile.close();
+        }   else {
+                // if the file didn't open, report an error:
+                Serial.println("error opening the text file!");
+            }
+    }
+
+    void readFromFile() {
+        myFile = SD.open(naamFile);
+        Serial.println(naamFile);
+        if (myFile) {
+            Serial.println("datafile.txt bevat het volgende:");
+            // read all the text written on the file
+            while (myFile.available()) {
+                //Serial.write(myFile.read());
+                //Serial.end();
+                String list = String(myFile.readStringUntil("\n"));
+                //Serial.begin();
+                Serial.print("De eerste regel van de file");
+                Serial.println(list);
+                Serial.print("De volgende regel van de file");
+            }
+            // close the file:
+            myFile.close();
+        }   else {
+                // if the file didn't open, report an error:
+                Serial.println("error opening the text file!");
+            }
+    }
+
+    String maakKlimaatDataString() {
+        static int metingNummer = 100;
+        String a;
+        String result;
+        for(int plantenbak = 0; plantenbak < 3; plantenbak++) {
+            for(int variable = 0; variable < 30; variable++) {
+                a = klimaatDataNu[plantenbak][variable];
+                result = result + a + ",";
+            }
+        }
+        result = result + metingNummer +"\n";
+        metingNummer = metingNummer + 1;
+        return result;
+    }
+};
+
 class Klok {
     
     RtcDS3231<TwoWire> Rtc;
-    KlimaatDataLogger klimaatDataLoggerKlok;
-    
+        
     public:
     Klok() : 
-        Rtc(Wire),
-        klimaatDataLoggerKlok()
-    { }
+        Rtc(Wire)
+    {}
 
-    String setup () {
+    void setup () {
         
         Serial.print("compiled: ");
         Serial.println(__DATE__);
@@ -532,7 +628,7 @@ class Klok {
         Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone); 
         Serial.println("Klok geinitieerd");
         String dateTime = geefDatumString(now);
-        return dateTime;
+        //return dateTime;
     }
 
     RtcDateTime getTime(){
@@ -553,17 +649,11 @@ class Klok {
                 Serial.println("RTC lost confidence in the DateTime! Check battery");
             }
         }
-
         RtcDateTime now = Rtc.GetDateTime();
-        Serial.println("Dit is de loop tijd ");
-        printDateTime(now);
-        Serial.println();
-
         return(now);
     }
     
-    void printDateTime(const RtcDateTime& dt)
-    {
+    void printDateTime(const RtcDateTime& dt) {
         char datestring[20];
 
         snprintf_P(datestring, 
@@ -669,83 +759,6 @@ class Plantenbak {
     }  
 };
 
-class KlimaatDataLogger {
-    
-    File myFile;
-    int csPin = 53;
-    String naamFile = "datafile.txt";
-    Static vector<int> klimaatGevens;
-
-    public:
-    KlimaatDataLogger() :
-        myFile()
-    {
-        pinMode(53, OUTPUT);
-    }
-
-    void setup() {
-        Serial.begin(9600);
-        Serial.print("Initializing card...");
-        if (!SD.begin(csPin)) {
-            Serial.println("initialization of the SD card failed!");
-            return;
-        }
-        Serial.println("initialization of the SDcard is done.");
-        Serial.print("Creating file named: ");
-        Serial.print(naamFile);
-        myFile = SD.open(naamFile, FILE_WRITE);
-    }
-    
-    void writeToFile(String data) {
-        myFile = SD.open(naamFile, FILE_WRITE);
-        if (myFile) {
-            Serial.print("Writing to the text file...");
-            myFile.println(data);
-            myFile.close(); // close the file:
-            Serial.println("done closing.");
-        }   else {
-                // if the file didn't open, report an error:
-                Serial.println("error opening the text file!");
-            }
-    }
-
-    void readFromFile() {
-        myFile = SD.open(naamFile);
-        Serial.println(naamFile);
-        if (myFile) {
-            Serial.println("datafile.txt bevat het volgende:");
-            // read all the text written on the file
-            while (myFile.available()) {
-                //Serial.write(myFile.read());
-                //Serial.end();
-                String list = String(myFile.readStringUntil("\n"));
-                //Serial.begin();
-                Serial.print("De eerste regel van de file");
-                Serial.println(list);
-                Serial.print("De volgende regel van de file");
-            }
-            // close the file:
-            myFile.close();
-        }   else {
-                // if the file didn't open, report an error:
-                Serial.println("error opening the text file!");
-            }
-    }
-
-    String maakKlimaatDataString() {
-        String a;
-        String result;
-        for(int plantenbak = 0; plantenbak < 3; plantenbak++) {
-            for(int variable = 0; variable < 15; variable++) {
-                a = klimaatDataNu[plantenbak][variable];
-                result = result + a + ",";
-            }
-        }
-        result = result + "\n";
-        return result;
-    }
-};
-
 class TouchScreen {
     
     UTFT myGLCD;
@@ -843,7 +856,6 @@ class TouchScreen {
         myGLCD.setBackColor(VGA_BLACK);
         myGLCD.setFont(BigFont);
         myGLCD.print(myDatumTijd, CENTER, 220);
-        delay(9000);
     }
 
 void updateStr(int val)
@@ -868,6 +880,14 @@ void updateStr(int val)
     myGLCD.print("            ", CENTER, 192);
     myGLCD.setColor(0, 255, 0);
   }
+//   myGLCD.lcdOff();
+  delay(4000);
+//   myGLCD.lcdOn();
+  myGLCD.setContrast(64);
+  delay(4000);
+  myGLCD.setContrast(1);
+  delay(4000);
+
 }
 
 // Draw a red frame while a button is touched
@@ -911,9 +931,6 @@ void waitForIt(int x1, int y1, int x2, int y2)
 };
 
 KlimaatDataLogger klimaatDataLogger;
-vector<int> KlimaatDataLogger::klimaatGevens;
-
-KlimaatDataLogger klimaatDataLogger;
 TouchScreen touchScreen;
 Klok klok;
 
@@ -925,13 +942,14 @@ int bakNummer3 = bakNummer2 + 1;
 Plantenbak plantenbak3(pinArray3, bakNummer3);
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(57600);
     klok.setup();
     touchScreen.setup();
     klimaatDataLogger.setup();
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
+
 }
 
 void loop() {
@@ -939,31 +957,19 @@ void loop() {
     plantenbak1.regelKlimaat(tijd, bakNummer1);
     plantenbak2.regelKlimaat(tijd, bakNummer2);
     plantenbak3.regelKlimaat(tijd, bakNummer3);
-    // Serial.println(klimaatDataNu[0][1]);
-    // Serial.println(klimaatDataNu[1][1]);
-    // Serial.println(klimaatDataNu[2][1]);
     String datumTijd = klok.geefDatumTijdString(tijd);
     touchScreen.toonStartScherm(datumTijd);
-    
     int minuut = tijd.Minute();
-    Serial.println(minuut);
     int minuutNu = tijd.Minute();
     while ((minuutNu - minuut) < 1) {
-        Serial.print("minuutNu in while loop =");
-        Serial.println(minuutNu);
-        Serial.println(minuutNu - minuut);
         touchScreen.kiesPlantenBak();
-        Serial.println("while loop!!!!!!");
         RtcDateTime nieuweTijd = klok.getTime();
         minuutNu = nieuweTijd.Minute();
-        Serial.println(minuutNu);
-        Serial.println(minuutNu - minuut);
-        
     }
-    // String klimaatDataString = klimaatDataLogger.maakKlimaatDataString();
-    //Serial.println(klimaatDataString);
-    // klimaatDataLogger.writeToFile(klimaatDataString);
-    // klimaatDataLogger.readFromFile();
+    String klimaatDataString = klimaatDataLogger.maakKlimaatDataString();
+    Serial.println(klimaatDataString);
+    klimaatDataLogger.writeToFile(klimaatDataString);
+    //klimaatDataLogger.readFromFile();
     Serial.println();
     
 }
