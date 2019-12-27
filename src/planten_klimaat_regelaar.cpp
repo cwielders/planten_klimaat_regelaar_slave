@@ -812,9 +812,9 @@ class TouchScreen {
                     myGLCD.setBackColor(VGA_GRAY);
                     break;
             }
-            myGLCD.fillRoundRect(2, (i*71) + 5, 318, (i*71) + 70);
+            myGLCD.fillRoundRect(2, (i*71) + 2, 318, (i*71) + 71);
             myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect(2, (i*71) + 5, 318, (i*71) + 70);
+            myGLCD.drawRoundRect(2, (i*71) + 2, 318, (i*71) + 71);
             myGLCD.setFont(SmallFont);
             myGLCD.print(String("Temperature"), 6, (i*71) +6);
             myGLCD.print(String("Humidity"), 6, (i*71) + 39);
@@ -886,33 +886,49 @@ class TouchScreen {
                 myGLCD.setColor(VGA_GRAY);
                 myGLCD.setBackColor(VGA_GRAY);
             }
-            myGLCD.fillRoundRect(2, (i*71) + 5, 318, (i*71) + 70);
+            myGLCD.fillRoundRect(1, (i*71) + 1, 318, (i*71) + 71);
             myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect (2, (i*71) + 5, 318, (i*71) + 70);
             myGLCD.setFont(SmallFont);
-            myGLCD.print(String("Temperature"), 6, (i*71) +6);
-            myGLCD.print(String("Humidity"), 6, (i*71) + 39);
-            myGLCD.print(String("Soil"), 140, (i*71) + 6);
-            myGLCD.print(String("Light"),140, (i*71) + 39);
-            myGLCD.print(String("Daylight"), 200, (i*71) + 6);
-            myGLCD.print(String("Dew"), 260, (i*71) + 39);
-            myGLCD.print(String("Clouds"),200, (i*71) + 39);
+            myGLCD.drawRoundRect (1, (i*71) + 1, 318, (i*71) + 71);
+            myGLCD.print("jan", 3, (i*71) + 29);
+            myGLCD.print("feb", 29, (i*71) + 29);
+            myGLCD.print("mar", 55, (i*71) + 29);
+            myGLCD.print("apr", 81, (i*71) + 29);
+            myGLCD.print("may", 107, (i*71) + 29);
+            myGLCD.print("jun", 133, (i*71) + 29);
+            myGLCD.print("jul", 159, (i*71) + 29);
+            myGLCD.print("aug", 185, (i*71) + 29);
+            myGLCD.print("sep", 211, (i*71) + 29);
+            myGLCD.print("oct", 237, (i*71) + 29);
+            myGLCD.print("nov", 263, (i*71) + 29);
+            myGLCD.print("dec", 289, (i*71) + 29);
+            for(int j = 0; j <12; j++) {
+                myGLCD.drawRoundRect((j*26) + 2, (i*71) + 29, (j*26) + 26, (i*71) + 42);
+            }
             myGLCD.setFont(SmallFont);
-            myGLCD.print(String("min"), 6, (i*71) + 21);
-            myGLCD.print(String("max"), 63, (i*71) + 21);
-            myGLCD.print(String("start"), 232, (i*71) + 21);
-            myGLCD.print(String("average"), 6, (i*71) + 53);
+            myGLCD.print(String("Temperature"), 6, (i*71) + 2);
+            myGLCD.print(String("Humidity"), 6, (i*71) + 43);
+            myGLCD.print(String("Soil"), 140, (i*71) + 2);
+            myGLCD.print(String("Light"),140, (i*71) + 43);
+            myGLCD.print(String("Daylight"), 200, (i*71) + 2);
+            myGLCD.print(String("Dew"), 260, (i*71) + 43);
+            myGLCD.print(String("Clouds"),200, (i*71) + 43);
+            myGLCD.setFont(SmallFont);
+            myGLCD.print(String("min"), 6, (i*71) + 16);
+            myGLCD.print(String("max"), 63, (i*71) + 16);
+            myGLCD.print(String("start"), 232, (i*71) + 16);
+            myGLCD.print(String("average"), 6, (i*71) + 58);
             myGLCD.setFont(BigFont);
             myGLCD.setColor(VGA_YELLOW);
-            myGLCD.print(String(plantenBakSettings1[bak][i][NACHTTEMPERATUUR]), 29, (i*71) + 18);
-            myGLCD.print(String(plantenBakSettings1[bak][i][DAGTEMPERATUUR]), 85, (i*71) + 18);
-            myGLCD.print(String(plantenBakSettings1[bak][i][STARTDAG]), 200, (i*71) + 18);
-            myGLCD.print(String(plantenBakSettings1[bak][i][EINDDAG])+ String("H"), 270, (i*71) + 18);
-            myGLCD.print(String("C"), 115, (i*71) + 18);
-            myGLCD.fillCircle(116, (i*71) + 18, 2);
-            myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 51);
-            myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 18);
-            myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 51);
+            myGLCD.print(String(plantenBakSettings1[bak][i][NACHTTEMPERATUUR]), 29, (i*71) + 13);
+            myGLCD.print(String(plantenBakSettings1[bak][i][DAGTEMPERATUUR]), 85, (i*71) + 13);
+            myGLCD.print(String(plantenBakSettings1[bak][i][STARTDAG]), 200, (i*71) + 13);
+            myGLCD.print(String(plantenBakSettings1[bak][i][EINDDAG])+ String("H"), 270, (i*71) + 13);
+            myGLCD.print(String("C"), 115, (i*71) + 13);
+            myGLCD.fillCircle(116, (i*71) + 15, 2);
+            myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 55);
+            myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
+            myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 55);
             Serial.print("Het BakNummer is:");
             Serial.println(bak);
             Serial.print("Het getal (settingsscherm) is:");
@@ -947,12 +963,12 @@ class TouchScreen {
             // currentPage = 2;
             // for(int i; i < 5; i++) {
             // }
-            myGLCD.setColor(VGA_WHITE);
+            myGLCD.setColor(VGA_BLACK);
             myGLCD.fillRoundRect(2, 215, 80, 238);
             myGLCD.fillRoundRect(82, 215, 160, 238);
             myGLCD.fillRoundRect(162, 215, 240, 238);
             myGLCD.fillRoundRect(242, 215, 318, 238);
-            myGLCD.setColor(VGA_RED);
+            myGLCD.setColor(VGA_WHITE);
             myGLCD.drawRoundRect(2, 215, 80, 238);
             myGLCD.drawRoundRect(82, 215, 160, 238);
             myGLCD.drawRoundRect(162, 215, 240, 238);
@@ -972,7 +988,7 @@ class TouchScreen {
             y=myTouch.getY();
             if ((y>=210) && (y<=240)) { 
                 if ((x>=0) && (x<=80)) {
-                    betast(2, 76, 315, 141);
+                    betast(2, 215, 80, 238);
                 }
                 if ((x>=80) && (x<=160)) {
                     betast(82, 215, 160, 238);
