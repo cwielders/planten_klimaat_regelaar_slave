@@ -751,17 +751,17 @@ class Plantenbak {
             maxPotVocht = potVochtigheid;
             klimaatDataNu[plantenBakNummer][HOOGSTEPOTVOCHTIGHEID] = potVochtigheid;
         }
-        klimaatDataNu[plantenBakNummer][POTVOCHTIGHEID] = (potVochtigheid/maxPotVocht)*100;
+        klimaatDataNu[plantenBakNummer][POTVOCHTIGHEID] = (potVochtigheid/maxPotVocht)*99; //100% past niet op display
         Serial.print("Soil Moisture = ");  
-        Serial.println((potVochtigheid/maxPotVocht)*100);
+        Serial.println((potVochtigheid/maxPotVocht)*100);//100% past niet op display
         int licht = lichtSensor.readLogValue();
         if(licht > maxLicht) {
             maxLicht = licht;
             klimaatDataNu[plantenBakNummer][MEESTELICHT] = licht;
         }
-        klimaatDataNu[plantenBakNummer][LICHT] = (licht/maxLicht)*100;
+        klimaatDataNu[plantenBakNummer][LICHT] = (licht/maxLicht)*99;//100% past niet op display
         Serial.print("Licht = ");
-        Serial.println((licht/maxLicht)*100);
+        Serial.println((licht/maxLicht)*99); //100% past niet op display
         klimaatRegelaar.doeJeKlimaatDing(myTime);
     }  
 };
@@ -795,7 +795,8 @@ class TouchScreen {
     }
 
     void toonStartScherm(String myDatumTijd) {
-        //myGLCD.clrScr();
+        currentPage = 1;
+        myGLCD.clrScr();
         for (int i = 0; i < 3; i++) {
             switch (klimaatDataNu[i][SEIZOEN]) {
                 case WINTER :
@@ -813,15 +814,17 @@ class TouchScreen {
             }
             myGLCD.fillRoundRect(2, (i*71) + 5, 318, (i*71) + 70);
             myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect (2, (i*71) + 5, 318, (i*71) + 70);
+            myGLCD.drawRoundRect(2, (i*71) + 5, 318, (i*71) + 70);
             myGLCD.setFont(SmallFont);
-            myGLCD.print(String("Temperature"), 11, (i*71) +6);
-            myGLCD.print(String("Humidity"), 11, (i*71) + 39);
-            myGLCD.print(String("Soil"), 150, (i*71) + 6);
-            myGLCD.print(String("Light"),150, (i*71) + 39);
-            myGLCD.print(String(klimaatDataNu[i][NACHTTEMPERATUUR]) + "/", 11, (i*71) + 21);
-            myGLCD.print(String("/") + String(klimaatDataNu[i][DAGTEMPERATUUR]), 90, (i*71) + 21);
-            myGLCD.print(String("/") + String(klimaatDataNu[i][LUCHTVOCHTIGHEID]), 59, (i*71) + 53);
+            myGLCD.print(String("Temperature"), 6, (i*71) +6);
+            myGLCD.print(String("Humidity"), 6, (i*71) + 39);
+            myGLCD.print(String("Soil"), 140, (i*71) + 6);
+            myGLCD.print(String("Light"),140, (i*71) + 39);
+            myGLCD.print(String(klimaatDataNu[i][NACHTTEMPERATUUR]) + "/", 6, (i*71) + 21);
+            myGLCD.print(String("/") + String(klimaatDataNu[i][DAGTEMPERATUUR]), 76, (i*71) + 21);
+            myGLCD.print(String("/") + String(klimaatDataNu[i][LUCHTVOCHTIGHEID]), 53, (i*71) + 53);
+            myGLCD.print(String("/") + String(klimaatDataNu[i][WATERGEVEN]), 190, (i*71) + 21);
+            myGLCD.print(String("/") + String(klimaatDataNu[i][LAMPENVERVANGEN]), 190, (i*71) + 53);
             myGLCD.setColor(VGA_YELLOW);
             if(klimaatDataNu[i][ISDAUW] == 1) {
                 myGLCD.print(String("Dew"), 265, (i*71) + 21);
@@ -845,12 +848,12 @@ class TouchScreen {
             }
             myGLCD.setFont(BigFont);
             myGLCD.setColor(VGA_YELLOW);
-            myGLCD.print(String(klimaatDataNu[i][TEMPERATUUR]), 35, (i*71) + 18);
-            myGLCD.print(String("C"), 73, (i*71) + 18);
-             myGLCD.fillCircle(73, (i*71) + 19, 2);
-            myGLCD.print(String(klimaatDataNu[i][LUCHTVOCHTIGHEIDNU]) + "%", 11, (i*71) + 51);
-            myGLCD.print(String(klimaatDataNu[i][POTVOCHTIGHEID]) + "%", 150, (i*71) + 18);
-            myGLCD.print(String(klimaatDataNu[i][LICHT]) + "%", 150, (i*71) + 51);
+            myGLCD.print(String(klimaatDataNu[i][TEMPERATUUR]), 28, (i*71) + 18);
+            myGLCD.print(String("C"), 60, (i*71) + 18);
+             myGLCD.fillCircle(61, (i*71) + 19, 2);
+            myGLCD.print(String(klimaatDataNu[i][LUCHTVOCHTIGHEIDNU]) + "%", 5, (i*71) + 51);
+            myGLCD.print(String(klimaatDataNu[i][POTVOCHTIGHEID]) + "%", 140, (i*71) + 18);
+            myGLCD.print(String(klimaatDataNu[i][LICHT]) + "%", 140, (i*71) + 51);
             }
         myGLCD.setColor(VGA_WHITE);
         myGLCD.setBackColor(VGA_BLACK);
@@ -859,8 +862,7 @@ class TouchScreen {
     }
 
     void tekenSettingsScherm(int bak) {
-        int but1, but2, but3, but4;
-
+        currentPage = 2;
         myGLCD.clrScr();
         for (int i = 0; i < 3; i++) {
             if(i == 0) {
@@ -885,80 +887,111 @@ class TouchScreen {
                 myGLCD.setBackColor(VGA_GRAY);
             }
             myGLCD.fillRoundRect(2, (i*71) + 5, 318, (i*71) + 70);
-            // myGLCD.setColor(VGA_WHITE);
-            // myGLCD.drawRoundRect (2, (i*71) + 5, 318, (i*71) + 70);
             myGLCD.setColor(VGA_WHITE);
             myGLCD.drawRoundRect (2, (i*71) + 5, 318, (i*71) + 70);
             myGLCD.setFont(SmallFont);
-            myGLCD.print(String("Temperature"), 11, (i*71) +6);
-            myGLCD.print(String("Humidity"), 11, (i*71) + 39);
-            myGLCD.print(String("Soil"), 150, (i*71) + 6);
-            myGLCD.print(String("Light"),150, (i*71) + 39);
+            myGLCD.print(String("Temperature"), 6, (i*71) +6);
+            myGLCD.print(String("Humidity"), 6, (i*71) + 39);
+            myGLCD.print(String("Soil"), 140, (i*71) + 6);
+            myGLCD.print(String("Light"),140, (i*71) + 39);
+            myGLCD.print(String("Daylight"), 200, (i*71) + 6);
+            myGLCD.print(String("Dew"), 260, (i*71) + 39);
+            myGLCD.print(String("Clouds"),200, (i*71) + 39);
             myGLCD.setFont(SmallFont);
-            myGLCD.print(String("min"), 11, (i*71) + 21);
-            myGLCD.print(String("max"), 70, (i*71) + 21);
-            myGLCD.print(String("average"), 11, (i*71) + 53);
+            myGLCD.print(String("min"), 6, (i*71) + 21);
+            myGLCD.print(String("max"), 63, (i*71) + 21);
+            myGLCD.print(String("start"), 232, (i*71) + 21);
+            myGLCD.print(String("average"), 6, (i*71) + 53);
             myGLCD.setFont(BigFont);
             myGLCD.setColor(VGA_YELLOW);
-            myGLCD.print(String(plantenBakSettings1[bak][i][NACHTTEMPERATUUR]), 35, (i*71) + 18);
-            myGLCD.print(String(plantenBakSettings1[bak][i][DAGTEMPERATUUR]), 94, (i*71) + 18);
-            myGLCD.print(String("C"), 128, (i*71) + 18);
-            myGLCD.fillCircle(128, (i*71) + 18, 2);
-            myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 67, (i*71) + 51);
-            myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 150, (i*71) + 18);
-            myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 150, (i*71) + 51);
+            myGLCD.print(String(plantenBakSettings1[bak][i][NACHTTEMPERATUUR]), 29, (i*71) + 18);
+            myGLCD.print(String(plantenBakSettings1[bak][i][DAGTEMPERATUUR]), 85, (i*71) + 18);
+            myGLCD.print(String(plantenBakSettings1[bak][i][STARTDAG]), 200, (i*71) + 18);
+            myGLCD.print(String(plantenBakSettings1[bak][i][EINDDAG])+ String("H"), 270, (i*71) + 18);
+            myGLCD.print(String("C"), 115, (i*71) + 18);
+            myGLCD.fillCircle(116, (i*71) + 18, 2);
+            myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 51);
+            myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 18);
+            myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 51);
             Serial.print("Het BakNummer is:");
             Serial.println(bak);
             Serial.print("Het getal (settingsscherm) is:");
             Serial.println(klimaatDataNu[2][LUCHTVOCHTIGHEIDNU]);
             Serial.println(bak);
             myGLCD.setColor(VGA_YELLOW);
-            switch (bak) {
-                case 0 :
-                    myGLCD.print("BOTTOM", 205, 35 + (i*71));
-                    break;
-                case 1 :
-                    myGLCD.print("CENTER", 205, 35 + (i*71));      break;
-                case 2 : 
-                    myGLCD.print("TOP", 231, 35 + (i*71));
-                    break;
-            }
-            if(i == 0) {
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.setFont(BigFont);
-                myGLCD.print("WINTER", 205, 51 + (i*71));
-            }  
-            if(i == 1) { 
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.setFont(BigFont);
-                myGLCD.print("SUMMER", 205, 51 + (i*71));
-            }
-            if(i == 2) { 
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.setFont(BigFont);
-                myGLCD.print("RAIN", 221, 51 + (i*71));
-            }
-            currentPage = 2;
-            for(int i; i < 5; i++) {
-
-            }
+            // switch (bak) {
+            //     case 0 :
+            //         myGLCD.print("BOTTOM", 205, 35 + (i*71));
+            //         break;
+            //     case 1 :
+            //         myGLCD.print("CENTER", 205, 35 + (i*71));      break;
+            //     case 2 : 
+            //         myGLCD.print("TOP", 231, 35 + (i*71));
+            //         break;
+            // }
+            // if(i == 0) {
+            //     myGLCD.setColor(VGA_WHITE);
+            //     myGLCD.setFont(BigFont);
+            //     myGLCD.print("WINTER", 205, 51 + (i*71));
+            // }  
+            // if(i == 1) { 
+            //     myGLCD.setColor(VGA_WHITE);
+            //     myGLCD.setFont(BigFont);
+            //     myGLCD.print("SUMMER", 205, 51 + (i*71));
+            // }
+            // if(i == 2) { 
+            //     myGLCD.setColor(VGA_WHITE);
+            //     myGLCD.setFont(BigFont);
+            //     myGLCD.print("RAIN", 221, 51 + (i*71));
+            // }
+            // currentPage = 2;
+            // for(int i; i < 5; i++) {
+            // }
             myGLCD.setColor(VGA_WHITE);
             myGLCD.fillRoundRect(2, 215, 80, 238);
             myGLCD.fillRoundRect(82, 215, 160, 238);
             myGLCD.fillRoundRect(162, 215, 240, 238);
             myGLCD.fillRoundRect(242, 215, 318, 238);
-            
-            // but1 = myButtons.addButton(2, 215, 55, 35,"setings");
-            // but1 = myButtons.addButton(60, 215, 55, 35,"history");
-            // but1 = myButtons.addButton(118, 215, 55, 35,"flowers");
-            // but1 = myButtons.addButton(176, 215, 55, 35,"back");
-            // myButtons.drawButtons()   ;
-
-     }    
+            myGLCD.setColor(VGA_RED);
+            myGLCD.drawRoundRect(2, 215, 80, 238);
+            myGLCD.drawRoundRect(82, 215, 160, 238);
+            myGLCD.drawRoundRect(162, 215, 240, 238);
+            myGLCD.drawRoundRect(242, 215, 318, 238);
+        }
+        while (currentPage == 2) {
+            kiesFunctie();
+            Serial.print("in de settings while loop");
+        } 
     }
 
+    void kiesFunctie() {
+        String test = "opnieuw";
+        if (currentPage == 2 && myTouch.dataAvailable()) {
+            myTouch.read();
+            x=myTouch.getX();
+            y=myTouch.getY();
+            if ((y>=210) && (y<=240)) { 
+                if ((x>=0) && (x<=80)) {
+                    betast(2, 76, 315, 141);
+                }
+                if ((x>=80) && (x<=160)) {
+                    betast(82, 215, 160, 238);
+                }
+                if ((x>=160) && (x<=240)) {
+                    betast(162, 215, 240, 238);
+                }
+                if ((x>=240) && (x<=320)) {
+                    betast(242, 215, 318, 238);
+                    toonStartScherm(test);
+                }
+            }
+        }
+    }
+
+
+
 // Draw a red frame while a button is touched
-    void betast(int x1, int y1, int x2, int y2, int bakNummer) {
+    void betast(int x1, int y1, int x2, int y2) {
         myGLCD.setColor(VGA_GREEN);
         myGLCD.drawRoundRect (x1, y1, x2, y2);
         while (myTouch.dataAvailable())
@@ -974,18 +1007,18 @@ class TouchScreen {
             y=myTouch.getY();
             if ((y>=10) && (y<=70)) { // bovenste bak
                 gekozenBak = 2;
-                betast(2, 5, 315, 70, gekozenBak);
+                betast(2, 5, 315, 70);
                 tekenSettingsScherm(gekozenBak);
             }
             if ((y>=73) && (y<=143)) {// middelste bak
                 gekozenBak = 1;
-                betast(2, 76, 315, 141, gekozenBak);
+                betast(2, 76, 315, 141);
                 tekenSettingsScherm(gekozenBak);
                 
             }
             if ((y>=130) && (y<=180)) { // Button: 3
                 gekozenBak = 0;
-                betast(2, 147, 315, 212, gekozenBak);
+                betast(2, 147, 315, 212);
                 tekenSettingsScherm(gekozenBak);
             }
             Serial.print("Het getal(kiesplantenbak) is:");
