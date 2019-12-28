@@ -773,9 +773,9 @@ class TouchScreen {
     UTFT_Buttons myButtons;
     
     int x, y;
-    char stCurrent[20]="";
+    char stCurrent[2]="";
     int stCurrentLen=0;
-    char stLast[20]=""; 
+    char stLast[2]=""; 
 
     public:
     TouchScreen() :
@@ -888,23 +888,7 @@ class TouchScreen {
             }
             myGLCD.fillRoundRect(1, (i*71) + 1, 318, (i*71) + 71);
             myGLCD.setColor(VGA_WHITE);
-            myGLCD.setFont(SmallFont);
             myGLCD.drawRoundRect (1, (i*71) + 1, 318, (i*71) + 71);
-            myGLCD.print("jan", 3, (i*71) + 29);
-            myGLCD.print("feb", 29, (i*71) + 29);
-            myGLCD.print("mar", 55, (i*71) + 29);
-            myGLCD.print("apr", 81, (i*71) + 29);
-            myGLCD.print("may", 107, (i*71) + 29);
-            myGLCD.print("jun", 133, (i*71) + 29);
-            myGLCD.print("jul", 159, (i*71) + 29);
-            myGLCD.print("aug", 185, (i*71) + 29);
-            myGLCD.print("sep", 211, (i*71) + 29);
-            myGLCD.print("oct", 237, (i*71) + 29);
-            myGLCD.print("nov", 263, (i*71) + 29);
-            myGLCD.print("dec", 289, (i*71) + 29);
-            for(int j = 0; j <12; j++) {
-                myGLCD.drawRoundRect((j*26) + 2, (i*71) + 29, (j*26) + 26, (i*71) + 42);
-            }
             myGLCD.setFont(SmallFont);
             myGLCD.print(String("Temperature"), 6, (i*71) + 2);
             myGLCD.print(String("Humidity"), 6, (i*71) + 43);
@@ -929,58 +913,340 @@ class TouchScreen {
             myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 55);
             myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
             myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 55);
-            Serial.print("Het BakNummer is:");
-            Serial.println(bak);
-            Serial.print("Het getal (settingsscherm) is:");
             Serial.println(klimaatDataNu[2][LUCHTVOCHTIGHEIDNU]);
             Serial.println(bak);
-            myGLCD.setColor(VGA_YELLOW);
-            // switch (bak) {
-            //     case 0 :
-            //         myGLCD.print("BOTTOM", 205, 35 + (i*71));
-            //         break;
-            //     case 1 :
-            //         myGLCD.print("CENTER", 205, 35 + (i*71));      break;
-            //     case 2 : 
-            //         myGLCD.print("TOP", 231, 35 + (i*71));
-            //         break;
-            // }
-            // if(i == 0) {
-            //     myGLCD.setColor(VGA_WHITE);
-            //     myGLCD.setFont(BigFont);
-            //     myGLCD.print("WINTER", 205, 51 + (i*71));
-            // }  
-            // if(i == 1) { 
-            //     myGLCD.setColor(VGA_WHITE);
-            //     myGLCD.setFont(BigFont);
-            //     myGLCD.print("SUMMER", 205, 51 + (i*71));
-            // }
-            // if(i == 2) { 
-            //     myGLCD.setColor(VGA_WHITE);
-            //     myGLCD.setFont(BigFont);
-            //     myGLCD.print("RAIN", 221, 51 + (i*71));
-            // }
-            // currentPage = 2;
-            // for(int i; i < 5; i++) {
-            // }
-            myGLCD.setColor(VGA_BLACK);
-            myGLCD.fillRoundRect(2, 215, 80, 238);
-            myGLCD.fillRoundRect(82, 215, 160, 238);
-            myGLCD.fillRoundRect(162, 215, 240, 238);
-            myGLCD.fillRoundRect(242, 215, 318, 238);
-            myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect(2, 215, 80, 238);
-            myGLCD.drawRoundRect(82, 215, 160, 238);
-            myGLCD.drawRoundRect(162, 215, 240, 238);
-            myGLCD.drawRoundRect(242, 215, 318, 238);
-        }
+            myGLCD.setFont(SmallFont);
+            for(int j = 0; j <12; j++) {
+                myGLCD.setFont(SmallFont);
+                switch (plantenBakSettings1[bak][3][j]) {
+                case WINTER :
+                    myGLCD.setColor(0,0,225);
+                    myGLCD.setBackColor(0,0,225);
+                    myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                    myGLCD.setColor(VGA_WHITE);
+                    if(j== 0)
+                        myGLCD.print("jan", 6, (i*71) + 29);
+                    if(j==1) 
+                        myGLCD.print("feb", 32, (i*71) + 29);
+                    if(j==2) 
+                        myGLCD.print("mar", 58, (i*71) + 29);
+                    if(j==3)
+                        myGLCD.print("apr", 84, (i*71) + 29);
+                    if(j==4)
+                        myGLCD.print("may", 110, (i*71) + 29);
+                    if(j==5)
+                        myGLCD.print("jun", 136, (i*71) + 29);
+                    if(j==6)
+                        myGLCD.print("jul", 162, (i*71) + 29);
+                    if(j==7)
+                        myGLCD.print("aug", 188, (i*71) + 29);
+                    if(j==8)
+                        myGLCD.print("sep", 214, (i*71) + 29);
+                    if(j==9)
+                        myGLCD.print("oct", 240, (i*71) + 29);
+                    if(j==10)
+                        myGLCD.print("nov", 266, (i*71) + 29);
+                    if(j==11)
+                        myGLCD.print("dec", 292, (i*71) + 29);
+                    break;
+                case ZOMER :
+                    myGLCD.setColor(235,0,0);
+                    myGLCD.setBackColor(235,0,0);
+                    myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                    myGLCD.setColor(VGA_WHITE);
+                    if(j== 0) 
+                        myGLCD.print("jan", 6, (i*71) + 29);
+                    if(j==1)
+                        myGLCD.print("feb", 32, (i*71) + 29);
+                    if(j==2)
+                        myGLCD.print("mar", 58, (i*71) + 29);
+                    if(j==3)
+                        myGLCD.print("apr", 84, (i*71) + 29);
+                    if(j==4)
+                        myGLCD.print("may", 110, (i*71) + 29);
+                    if(j==5)
+                        myGLCD.print("jun", 136, (i*71) + 29);
+                    if(j==6)
+                        myGLCD.print("jul", 162, (i*71) + 29);
+                    if(j==7)
+                        myGLCD.print("aug", 188, (i*71) + 29);
+                    if(j==8)
+                        myGLCD.print("sep", 214, (i*71) + 29);
+                    if(j==9)
+                        myGLCD.print("oct", 240, (i*71) + 29);
+                    if(j==10)
+                        myGLCD.print("nov", 266, (i*71) + 29);
+                    if(j==11)
+                        myGLCD.print("dec", 292, (i*71) + 29);
+                    break;
+                case REGEN : 
+                    myGLCD.setColor(VGA_SILVER);
+                    myGLCD.setBackColor(VGA_SILVER);
+                    myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                    myGLCD.setColor(VGA_WHITE);
+                    if(j== 0)
+                        myGLCD.print("jan", 6, (i*71) + 29);
+                    if(j==1)
+                        myGLCD.print("feb", 32, (i*71) + 29);
+                    if(j==2)
+                        myGLCD.print("mar", 58, (i*71) + 29);
+                    if(j==3)
+                        myGLCD.print("apr", 84, (i*71) + 29);
+                    if(j==4)
+                        myGLCD.print("may", 110, (i*71) + 29);
+                    if(j==5)
+                        myGLCD.print("jun", 136, (i*71) + 29);
+                    if(j==6)
+                        myGLCD.print("jul", 162, (i*71) + 29);
+                    if(j==7)
+                        myGLCD.print("aug", 188, (i*71) + 29);
+                    if(j==8)
+                        myGLCD.print("sep", 214, (i*71) + 29);
+                    if(j==9)
+                        myGLCD.print("oct", 240, (i*71) + 29);
+                    if(j==10)
+                        myGLCD.print("nov", 266, (i*71) + 29);
+                    if(j==11)
+                        myGLCD.print("dec", 292, (i*71) + 29);
+                    break;
+                }
+                myGLCD.setColor(VGA_WHITE);
+                myGLCD.drawRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+            }
+          
+        }  
+        myGLCD.setColor(VGA_BLACK);
+        myGLCD.setBackColor(VGA_BLACK);
+        myGLCD.fillRoundRect(2, 215, 80, 238);
+        myGLCD.fillRoundRect(82, 215, 160, 238);
+        myGLCD.fillRoundRect(162, 215, 240, 238);
+        myGLCD.fillRoundRect(242, 215, 318, 238);
+        myGLCD.setColor(VGA_WHITE);
+        myGLCD.drawRoundRect(2, 215, 80, 238);
+        myGLCD.drawRoundRect(82, 215, 160, 238);
+        myGLCD.drawRoundRect(162, 215, 240, 238);
+        myGLCD.drawRoundRect(242, 215, 318, 238);
+        myGLCD.print("Back", 266, 221);
+        myGLCD.print("Settings", 10, 221);
         while (currentPage == 2) {
-            kiesFunctie();
-            Serial.print("in de settings while loop");
+            kiesFunctie(bak);
         } 
     }
 
-    void kiesFunctie() {
+    void kiesSettings(int bak) {
+        int variable;
+        if (currentPage == 3 && myTouch.dataAvailable()) {
+            myTouch.read();
+            x=myTouch.getX();
+            y=myTouch.getY();
+            for(int i=0;i<3;i++) {
+
+           
+                if ((y<=(i*71) + 29) && (y>=(i*71) + 13) && (x>=29 && x<=61)) { 
+                drawButtons();
+                variable = NACHTTEMPERATUUR;
+                leesGetal(bak, i, variable);
+                }
+            }
+        }
+    }
+
+void drawButtons() {
+// Draw the upper row of buttons
+    currentPage = 4;
+    myGLCD.clrScr();
+    myGLCD.setFont(BigFont);
+     myGLCD.setBackColor(VGA_BLUE);
+    for (x=0; x<5; x++)
+    {
+        myGLCD.setColor(0, 0, 255);
+        myGLCD.fillRoundRect (10+(x*60), 10, 60+(x*60), 60);
+        myGLCD.setColor(255, 255, 255);
+        myGLCD.drawRoundRect (10+(x*60), 10, 60+(x*60), 60);
+        myGLCD.printNumI(x+1, 27+(x*60), 27);
+    }
+// Draw the center row of buttons
+    for (x=0; x<5; x++)
+    {
+        myGLCD.setColor(0, 0, 255);
+        myGLCD.fillRoundRect (10+(x*60), 70, 60+(x*60), 120);
+        myGLCD.setColor(255, 255, 255);
+        myGLCD.drawRoundRect (10+(x*60), 70, 60+(x*60), 120);
+        if (x<4)
+        myGLCD.printNumI(x+6, 27+(x*60), 87);
+    }
+    myGLCD.print("0", 267, 87);
+    // Draw the lower row of buttons
+    myGLCD.setColor(0, 0, 255);
+    myGLCD.fillRoundRect (10, 130, 150, 180);
+    myGLCD.setColor(255, 255, 255);
+    myGLCD.drawRoundRect (10, 130, 150, 180);
+    myGLCD.print("Clear", 40, 147);
+    myGLCD.setColor(0, 0, 255);
+    myGLCD.fillRoundRect (160, 130, 300, 180);
+    myGLCD.setColor(255, 255, 255);
+    myGLCD.drawRoundRect (160, 130, 300, 180);
+    myGLCD.print("Enter", 190, 147);
+    myGLCD.setBackColor (0, 0, 0);
+    }
+
+void updateStr(int val)
+{
+  if (stCurrentLen<20)
+  {
+    stCurrent[stCurrentLen]=val;
+    stCurrent[stCurrentLen+1]='\0';
+    stCurrentLen++;
+    myGLCD.setColor(0, 255, 0);
+    myGLCD.print(stCurrent, LEFT, 224);
+  }
+  else
+  {
+    myGLCD.setColor(255, 0, 0);
+    myGLCD.print("BUFFER FULL!", CENTER, 192);
+    delay(500);
+    myGLCD.print("            ", CENTER, 192);
+    delay(500);
+    myGLCD.print("BUFFER FULL!", CENTER, 192);
+    delay(500);
+    myGLCD.print("            ", CENTER, 192);
+    myGLCD.setColor(0, 255, 0);
+  }
+}
+
+// Draw a red frame while a button is touched
+void waitForIt(int x1, int y1, int x2, int y2)
+{
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.drawRoundRect (x1, y1, x2, y2);
+  while (myTouch.dataAvailable())
+    myTouch.read();
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.drawRoundRect (x1, y1, x2, y2);
+}
+
+
+    void leesGetal(int bak, int seizoen, int variable)
+{
+  while (currentPage ==4)
+  {
+    if (myTouch.dataAvailable())
+    {
+      myTouch.read();
+      x=myTouch.getX();
+      y=myTouch.getY();
+      
+      if ((y>=10) && (y<=60))  // Upper row
+      {
+        if ((x>=10) && (x<=60))  // Button: 1
+        {
+          waitForIt(10, 10, 60, 60);
+          updateStr('1');
+        }
+        if ((x>=70) && (x<=120))  // Button: 2
+        {
+          waitForIt(70, 10, 120, 60);
+          updateStr('2');
+        }
+        if ((x>=130) && (x<=180))  // Button: 3
+        {
+          waitForIt(130, 10, 180, 60);
+          updateStr('3');
+        }
+        if ((x>=190) && (x<=240))  // Button: 4
+        {
+          waitForIt(190, 10, 240, 60);
+          updateStr('4');
+        }
+        if ((x>=250) && (x<=300))  // Button: 5
+        {
+          waitForIt(250, 10, 300, 60);
+          updateStr('5');
+        }
+      }
+
+      if ((y>=70) && (y<=120))  // Center row
+      {
+        if ((x>=10) && (x<=60))  // Button: 6
+        {
+          waitForIt(10, 70, 60, 120);
+          updateStr('6');
+        }
+        if ((x>=70) && (x<=120))  // Button: 7
+        {
+          waitForIt(70, 70, 120, 120);
+          updateStr('7');
+        }
+        if ((x>=130) && (x<=180))  // Button: 8
+        {
+          waitForIt(130, 70, 180, 120);
+          updateStr('8');
+        }
+        if ((x>=190) && (x<=240))  // Button: 9
+        {
+          waitForIt(190, 70, 240, 120);
+          updateStr('9');
+        }
+        if ((x>=250) && (x<=300))  // Button: 0
+        {
+          waitForIt(250, 70, 300, 120);
+          updateStr('0');
+        }
+      }
+
+      if ((y>=130) && (y<=180))  // Upper row
+      {
+        if ((x>=10) && (x<=150))  // Button: Clear
+        {
+          waitForIt(10, 130, 150, 180);
+          stCurrent[0]='\0';
+          stCurrentLen=0;
+          myGLCD.setColor(0, 0, 0);
+          myGLCD.fillRect(0, 224, 319, 239);
+        }
+        if ((x>=160) && (x<=300))  // Button: Enter
+        {
+          waitForIt(160, 130, 300, 180);
+          if (stCurrentLen>0)
+          {
+            for (x=0; x<stCurrentLen+1; x++)
+            {
+              stLast[x]=stCurrent[x];
+            }
+            stCurrent[0]='\0';
+            stCurrentLen=0;
+            myGLCD.setColor(0, 0, 0);
+            myGLCD.fillRect(0, 208, 319, 239);
+            myGLCD.setColor(0, 255, 0);
+            myGLCD.print(stLast, LEFT, 208);
+            int number = atoi(stLast);
+            plantenBakSettings1[bak][seizoen][variable] = number;
+            
+            stCurrent[2]="";
+            stCurrentLen=0;
+            stLast[2]=""; 
+            tekenSettingsScherm(bak); 
+
+          }
+          else
+          {
+            myGLCD.setColor(255, 0, 0);
+            myGLCD.print("BUFFER EMPTY", CENTER, 192);
+            delay(500);
+            myGLCD.print("            ", CENTER, 192);
+            delay(500);
+            myGLCD.print("BUFFER EMPTY", CENTER, 192);
+            delay(500);
+            myGLCD.print("            ", CENTER, 192);
+            myGLCD.setColor(0, 255, 0);
+          }
+        }
+      }
+    }
+  }
+}
+
+    void kiesFunctie(int bak) {
         String test = "opnieuw";
         if (currentPage == 2 && myTouch.dataAvailable()) {
             myTouch.read();
@@ -989,6 +1255,11 @@ class TouchScreen {
             if ((y>=210) && (y<=240)) { 
                 if ((x>=0) && (x<=80)) {
                     betast(2, 215, 80, 238);
+                    currentPage = 3;
+                    while (currentPage == 3) {
+                        kiesSettings(bak);
+                    }
+
                 }
                 if ((x>=80) && (x<=160)) {
                     betast(82, 215, 160, 238);
@@ -1022,7 +1293,7 @@ class TouchScreen {
             x=myTouch.getX();
             y=myTouch.getY();
             if ((y>=10) && (y<=70)) { // bovenste bak
-                gekozenBak = 2;
+                gekozenBak = 0;
                 betast(2, 5, 315, 70);
                 tekenSettingsScherm(gekozenBak);
             }
@@ -1033,7 +1304,7 @@ class TouchScreen {
                 
             }
             if ((y>=130) && (y<=180)) { // Button: 3
-                gekozenBak = 0;
+                gekozenBak = 2;
                 betast(2, 147, 315, 212);
                 tekenSettingsScherm(gekozenBak);
             }
