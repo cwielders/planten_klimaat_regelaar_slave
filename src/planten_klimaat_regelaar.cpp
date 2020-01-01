@@ -66,7 +66,7 @@ byte pinArray1[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
 byte pinArray2[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
 byte pinArray3[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
 
-int currentPage; //indicates the page that is active
+int currentPage= 1; //indicates the page that is active
 int klimaatDataNu[3][31];
 
 class LichtSensor {
@@ -1040,12 +1040,12 @@ class TouchScreen {
         myGLCD.drawRoundRect(162, 215, 240, 238);
         myGLCD.drawRoundRect(242, 215, 318, 238);
         myGLCD.print("Back", 266, 221);
-        myGLCD.print("ChiangMai", 5, 221);
+        myGLCD.print("Chiang", 5, 221);
         myGLCD.print("Mai", 58, 221);
         myGLCD.print("Manaus", 99, 221);
         myGLCD.print("Sumatra", 175, 221);
         while (currentPage == 3) {
-            if (myTouch.dataAvailable()) {
+            if (currentPage == 3 && myTouch.dataAvailable()) {
                 myTouch.read();
                 x=myTouch.getX();
                 y=myTouch.getY();
@@ -1080,11 +1080,11 @@ class TouchScreen {
                         tekenSettingsManipulatieScherm(bak);
                     }
                     if ((x>=240) && (x<=320)) {
-                        //break;
                         betast(242, 215, 318, 238);
-                        String test = "nogmaals";
-                        toonStartScherm(test);
-                        currentPage = 1;
+                        //String test = "nogmaals";
+                        //toonStartScherm(test);
+                        currentPage = 0;
+                        break;
                     }
                 }
                 for(int i=0;i<3;i++) {
@@ -1267,7 +1267,7 @@ class TouchScreen {
         Serial.print("currentPage = ");
         Serial.println(currentPage);
                 String test = "opnieuw";
-                if (myTouch.dataAvailable()) {
+                if (currentPage ==2 && myTouch.dataAvailable()) {
                     myTouch.read();
                     x=myTouch.getX();
                     y=myTouch.getY();
@@ -1288,7 +1288,8 @@ class TouchScreen {
                         if ((x>=240) && (x<=320)) {
                             betast(242, 215, 318, 238);
                             Serial.print("ikwas aangeraakt in settingsschermin ");
-                            toonStartScherm(test);
+                            //toonStartScherm(test);
+                            currentPage = 0;
                             break;
                         }
                     }
@@ -1361,10 +1362,10 @@ class TouchScreen {
 
     void leesGetal(int plantbak, int seizoen, int kolom) {
     Serial.println("begin leesgetal");
-        while (currentPage ==4) {
+        while (currentPage == 4) {
         Serial.print("currentPage = ");
         Serial.println(currentPage);
-            if (myTouch.dataAvailable()) {
+            if (currentPage == 4 && myTouch.dataAvailable()) {
                 myTouch.read();
                 x=myTouch.getX();
                 y=myTouch.getY();
@@ -1509,9 +1510,6 @@ class TouchScreen {
                 betast(2, 147, 315, 212);
                 tekenSettingsScherm(gekozenBak);
             }
-            Serial.print("Het getal(kiesplantenbak) is:");
-            Serial.println(klimaatDataNu[2][LUCHTVOCHTIGHEIDNU]);
-        ;
         }
     }
 };
@@ -1539,12 +1537,14 @@ void setup() {
 
 void loop() {
     Serial.println("begin main");
+    Serial.println("currentPage =");
+    Serial.println(currentPage);
     RtcDateTime tijd = klok.getTime();
     plantenbak1.regelKlimaat(tijd, bakNummer1);
     plantenbak2.regelKlimaat(tijd, bakNummer2);
     plantenbak3.regelKlimaat(tijd, bakNummer3);
     String datumTijd = klok.geefDatumTijdString(tijd);
-    if(currentPage == 1) {
+    if(currentPage == 1 or currentPage == 0) {
         touchScreen.toonStartScherm(datumTijd);
     }
     int minuut = tijd.Minute();
