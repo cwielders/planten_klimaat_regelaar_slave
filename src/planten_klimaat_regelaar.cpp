@@ -1116,9 +1116,125 @@ class TouchScreen {
                     leesGetal(bak, seizoen, variable);
                     }
                 }
+                int k = 0;
+                for(int j = 0; j <12; j++) {
+                    if (y>=(k*71) + 29 && y<=(k*71) + 42 && x>=(j*26) + 4 && x<=(j*26) + 30) { 
+                        Serial.print("maand geselecteerd");
+                        betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
+                        customPlantenBakSettings[bak][3][j] = k;
+                        myGLCD.setColor(0,0,225);
+                        myGLCD.setBackColor(0,0,225);
+                        for (int i = 0; i < 3; i++) {
+                            myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                            myGLCD.setColor(VGA_WHITE);
+                            if(j== 0)
+                                myGLCD.print("jan", 6, (i*71) + 29);
+                            if(j==1) 
+                                myGLCD.print("feb", 32, (i*71) + 29);
+                            if(j==2) 
+                                myGLCD.print("mar", 58, (i*71) + 29);
+                            if(j==3)
+                                myGLCD.print("apr", 84, (i*71) + 29);
+                            if(j==4)
+                                myGLCD.print("may", 110, (i*71) + 29);
+                            if(j==5)
+                                myGLCD.print("jun", 136, (i*71) + 29);
+                            if(j==6)
+                                myGLCD.print("jul", 162, (i*71) + 29);
+                            if(j==7)
+                                myGLCD.print("aug", 188, (i*71) + 29);
+                            if(j==8)
+                                myGLCD.print("sep", 214, (i*71) + 29);
+                            if(j==9)
+                                myGLCD.print("oct", 240, (i*71) + 29);
+                            if(j==10)
+                                myGLCD.print("nov", 266, (i*71) + 29);
+                            if(j==11)
+                                myGLCD.print("dec", 292, (i*71) + 29);
+                        
+                        }
+                    }
+                }
+                k = 1;
+                for(int j = 0; j <12; j++) {
+                    if (y>=(k*71) + 29 && y<=(k*71) + 42 && x>=(j*26) + 4 && x<=(j*26) + 30) { 
+                        Serial.print("maand geselecteerd");
+                        betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
+                        customPlantenBakSettings[bak][3][j] = k;
+                        myGLCD.setColor(235,0,0);
+                        myGLCD.setBackColor(235,0,0);
+                        for (int i = 0; i < 3; i++) {
+                            myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                            myGLCD.setColor(VGA_WHITE);
+                            if(j== 0) 
+                                myGLCD.print("jan", 6, (i*71) + 29);
+                            if(j==1)
+                                myGLCD.print("feb", 32, (i*71) + 29);
+                            if(j==2)
+                                myGLCD.print("mar", 58, (i*71) + 29);
+                            if(j==3)
+                                myGLCD.print("apr", 84, (i*71) + 29);
+                            if(j==4)
+                                myGLCD.print("may", 110, (i*71) + 29);
+                            if(j==5)
+                                myGLCD.print("jun", 136, (i*71) + 29);
+                            if(j==6)
+                                myGLCD.print("jul", 162, (i*71) + 29);
+                            if(j==7)
+                                myGLCD.print("aug", 188, (i*71) + 29);
+                            if(j==8)
+                                myGLCD.print("sep", 214, (i*71) + 29);
+                            if(j==9)
+                                myGLCD.print("oct", 240, (i*71) + 29);
+                            if(j==10)
+                                myGLCD.print("nov", 266, (i*71) + 29);
+                            if(j==11)
+                                myGLCD.print("dec", 292, (i*71) + 29);
+                        }
+                    }
+                }
+                k = 2;
+                for(int j = 0; j <12; j++) {
+                    if (y>=(k*71) + 29 && y<=(k*71) + 42 && x>=(j*26) + 4 && x<=(j*26) + 30) { 
+                        Serial.print("maand geselecteerd");
+                        betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
+                        customPlantenBakSettings[bak][3][j] = k;
+                        myGLCD.setColor(VGA_SILVER);
+                        myGLCD.setBackColor(VGA_SILVER);
+                        for (int i = 0; i < 3; i++) {
+                            myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                            myGLCD.setColor(VGA_WHITE);
+                            if(j== 0)
+                                myGLCD.print("jan", 6, (i*71) + 29);
+                            if(j==1)
+                                myGLCD.print("feb", 32, (i*71) + 29);
+                            if(j==2)
+                                myGLCD.print("mar", 58, (i*71) + 29);
+                            if(j==3)
+                                myGLCD.print("apr", 84, (i*71) + 29);
+                            if(j==4)
+                                myGLCD.print("may", 110, (i*71) + 29);
+                            if(j==5)
+                                myGLCD.print("jun", 136, (i*71) + 29);
+                            if(j==6)
+                                myGLCD.print("jul", 162, (i*71) + 29);
+                            if(j==7)
+                                myGLCD.print("aug", 188, (i*71) + 29);
+                            if(j==8)
+                                myGLCD.print("sep", 214, (i*71) + 29);
+                            if(j==9)
+                                myGLCD.print("oct", 240, (i*71) + 29);
+                            if(j==10)
+                                myGLCD.print("nov", 266, (i*71) + 29);
+                            if(j==11)
+                                myGLCD.print("dec", 292, (i*71) + 29);
+                        }
+                    }
+                }
             }
-        }
-    }
+        }        
+    }       
+    
 
 // myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 55);
 // myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
