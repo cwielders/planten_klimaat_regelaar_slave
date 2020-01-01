@@ -1045,7 +1045,7 @@ class TouchScreen {
         myGLCD.print("Manaus", 99, 221);
         myGLCD.print("Sumatra", 175, 221);
         while (currentPage == 3) {
-            if (currentPage == 3 && myTouch.dataAvailable()) {
+            if (myTouch.dataAvailable()) {
                 myTouch.read();
                 x=myTouch.getX();
                 y=myTouch.getY();
@@ -1058,6 +1058,7 @@ class TouchScreen {
                             }
                         }
                         tekenSettingsManipulatieScherm(bak);
+                        //toonStartScherm("changmai");
                     }
                     if ((x>=80) && (x<=160)) {
                         betast(2, 215, 80, 238);
@@ -1066,6 +1067,7 @@ class TouchScreen {
                                 customPlantenBakSettings[bak][i][j] = defaultPlantenBakSettings[MANAUS][i][j];
                             }
                         }
+                        //toonStartScherm("minaus");
                         tekenSettingsManipulatieScherm(bak);
                     }
                     if ((x>=160) && (x<=240)) {
@@ -1078,9 +1080,11 @@ class TouchScreen {
                         tekenSettingsManipulatieScherm(bak);
                     }
                     if ((x>=240) && (x<=320)) {
+                        //break;
                         betast(242, 215, 318, 238);
                         String test = "nogmaals";
                         toonStartScherm(test);
+                        currentPage = 1;
                     }
                 }
                 for(int i=0;i<3;i++) {
@@ -1240,50 +1244,55 @@ class TouchScreen {
 // myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
 // myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 55);
     void tekenSettingsScherm(int bak) {
-        tekenSettingsOverzicht(bak);
+         tekenSettingsOverzicht(bak);
     Serial.println("begin tekenSettingsscherm");
-    currentPage = 2;
-    Serial.print("currentPage = ");
-    Serial.println(currentPage);
-        myGLCD.setColor(VGA_BLACK);
-        myGLCD.setBackColor(VGA_BLACK);
-        myGLCD.fillRoundRect(2, 215, 80, 238);
-        myGLCD.fillRoundRect(82, 215, 160, 238);
-        myGLCD.fillRoundRect(162, 215, 240, 238);
-        myGLCD.fillRoundRect(242, 215, 318, 238);
-        myGLCD.setColor(VGA_WHITE);
-        myGLCD.drawRoundRect(2, 215, 80, 238);
-        myGLCD.drawRoundRect(82, 215, 160, 238);
-        myGLCD.drawRoundRect(162, 215, 240, 238);
-        myGLCD.drawRoundRect(242, 215, 318, 238);
-        myGLCD.print("Back", 266, 221);
-        myGLCD.print("Settings", 10, 221);
-        while (currentPage == 2) {
-    Serial.println("while loop settingsscherm");
-    Serial.print("currentPage = ");
-    Serial.println(currentPage);
-            String test = "opnieuw";
-            if (currentPage == 2 && myTouch.dataAvailable()) {
-                myTouch.read();
-                x=myTouch.getX();
-                y=myTouch.getY();
-                if ((y>=210) && (y<=240)) { 
-                    if ((x>=0) && (x<=80)) {
-                        betast(2, 215, 80, 238);
-                        tekenSettingsManipulatieScherm(bak);
-                    }
-                    if ((x>=80) && (x<=160)) {
-                        betast(82, 215, 160, 238);
-                    }
-                    if ((x>=160) && (x<=240)) {
-                        betast(162, 215, 240, 238);
-                    }
-                    if ((x>=240) && (x<=320)) {
-                        betast(242, 215, 318, 238);
-                        toonStartScherm(test);
+        currentPage = 2;
+        Serial.print("currentPage = ");
+        Serial.println(currentPage);
+            myGLCD.setColor(VGA_BLACK);
+            myGLCD.setBackColor(VGA_BLACK);
+            myGLCD.fillRoundRect(2, 215, 80, 238);
+            myGLCD.fillRoundRect(82, 215, 160, 238);
+            myGLCD.fillRoundRect(162, 215, 240, 238);
+            myGLCD.fillRoundRect(242, 215, 318, 238);
+            myGLCD.setColor(VGA_WHITE);
+            myGLCD.drawRoundRect(2, 215, 80, 238);
+            myGLCD.drawRoundRect(82, 215, 160, 238);
+            myGLCD.drawRoundRect(162, 215, 240, 238);
+            myGLCD.drawRoundRect(242, 215, 318, 238);
+            myGLCD.print("Back", 266, 221);
+            myGLCD.print("Settings", 10, 221);
+            while (currentPage == 2) {
+        
+        Serial.print("currentPage = ");
+        Serial.println(currentPage);
+                String test = "opnieuw";
+                if (myTouch.dataAvailable()) {
+                    myTouch.read();
+                    x=myTouch.getX();
+                    y=myTouch.getY();
+                    if ((y>=210) && (y<=240)) { 
+                        if ((x>=0) && (x<=80)) {
+                            betast(2, 215, 80, 238);
+                            tekenSettingsManipulatieScherm(bak);
+                            break;;
+                        }
+                        if ((x>=80) && (x<=160)) {
+                            betast(82, 215, 160, 238);
+                            //break;
+                        }
+                        if ((x>=160) && (x<=240)) {
+                            betast(162, 215, 240, 238);
+                            //break;
+                        }
+                        if ((x>=240) && (x<=320)) {
+                            betast(242, 215, 318, 238);
+                            Serial.print("ikwas aangeraakt in settingsschermin ");
+                            toonStartScherm(test);
+                            break;
+                        }
                     }
                 }
-            }
         }
     }
 
@@ -1353,7 +1362,6 @@ class TouchScreen {
     void leesGetal(int plantbak, int seizoen, int kolom) {
     Serial.println("begin leesgetal");
         while (currentPage ==4) {
-        Serial.println("while loop leesgetal");
         Serial.print("currentPage = ");
         Serial.println(currentPage);
             if (myTouch.dataAvailable()) {
@@ -1477,7 +1485,7 @@ class TouchScreen {
     }
 
     void kiesPlantenBak() {
-        Serial.println("begin kiesplantenbak");
+        
         int gekozenBak = 3; //3 is niet bestaandebestaande plantenbak
         if (currentPage == 1 && myTouch.dataAvailable()) {
     Serial.print("currentPage = ");
@@ -1503,6 +1511,7 @@ class TouchScreen {
             }
             Serial.print("Het getal(kiesplantenbak) is:");
             Serial.println(klimaatDataNu[2][LUCHTVOCHTIGHEIDNU]);
+        ;
         }
     }
 };
@@ -1540,7 +1549,7 @@ void loop() {
     }
     int minuut = tijd.Minute();
     int minuutNu = tijd.Minute();
-    while (currentPage ==1 && minuutNu == minuut) {
+    while (currentPage == 1 && minuutNu == minuut) {
         touchScreen.kiesPlantenBak();
         RtcDateTime nieuweTijd = klok.getTime();
         minuutNu = nieuweTijd.Minute();
