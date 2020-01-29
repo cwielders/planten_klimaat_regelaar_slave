@@ -18,32 +18,35 @@
 #define LAMPENVERVANGEN 4
 #define DUURDAUW 5
 #define DUURREGEN 6
-#define DUURDAG 7
-#define STARTDAG 8
-#define EINDDAG 9
-#define STARTDAUW 10
-#define STARTREGEN 11
-#define EINDREGEN 12
-#define SEIZOEN 13
-#define VENTILATOR 14
-#define VERNEVELAAR 15
-#define TEMPERATUUR 16
-#define LUCHTVOCHTIGHEIDNU 17
-#define POTVOCHTIGHEID 18
-#define LICHT 19
-#define LAMPENAAN1 20
-#define LAMPENAAN2 21
-#define JAAR 22
-#define MAAND 23
-#define DAG 24
-#define UUR 25
-#define MINUUT 26
-#define PLANTENBAKNUMMER 27
-#define HOOGSTEPOTVOCHTIGHEID 28
-#define MEESTELICHT 29
-#define ISDAG 30
-#define ISREGEN 31
-#define ISDAUW 32
+#define DUURBEWOLKING 7
+
+
+#define DUURDAG 8
+#define STARTDAG 9
+#define EINDDAG 10
+#define STARTDAUW 11
+#define STARTREGEN 12
+#define EINDREGEN 13
+#define SEIZOEN 14
+#define VENTILATOR 15
+#define VERNEVELAAR 16
+#define TEMPERATUUR 17
+#define LUCHTVOCHTIGHEIDNU 18
+#define POTVOCHTIGHEID 19
+#define LICHT 20
+#define LAMPENAAN1 21
+#define LAMPENAAN2 22
+#define JAAR 23
+#define MAAND 24
+#define DAG 25
+#define UUR 26
+#define MINUUT 27
+#define PLANTENBAKNUMMER 28
+#define HOOGSTEPOTVOCHTIGHEID 29
+#define MEESTELICHT 30
+#define ISDAG 31
+#define ISREGEN 32
+#define ISDAUW 33
 
 #define WINTER 0
 #define ZOMER 1
@@ -59,15 +62,19 @@
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 
-const int defaultPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
+const int defaultPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 int customPlantenBakSettings[3][4][12] = {};
 
-byte pinArray1[8] = {A0, 9, A1, 4, 5, 10, 8, 7}; 
-byte pinArray2[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
-byte pinArray3[8] = {A0, 9, A1, 4, 5, 10, 8, 7};
+byte pinArray1[8] = {A0, 9, A1, 24, 25, 20, 8, 27}; 
+byte pinArray2[8] = {A2, 11, A3, 24, 25, 20, 10, 27};
+byte pinArray3[8] = {A4, 13, A5, 4, 5, 10, 12, 7};
 
-int currentPage= 1; //indicates the page that is active
-int klimaatDataNu[3][31];
+        // soilHumiditySensor(myPins[0], myPins[1]),
+        // lichtSensor(myPins[2]),
+        // luchtVochtigheidTemperatuurSensor(myPins[6]),
+        // klimaatRegelaar(myPins[3] , myPins[7], myPins[5], myPins[4], myPlantenBakNummer),
+        // plantenBakNummer(myPlantenBakNummer)
+int currentPage= 1; //indicates the page that is active on touchscreen
 
 class LichtSensor {
 
@@ -78,7 +85,6 @@ class LichtSensor {
     public:
     LichtSensor(int myPin) {
         pin = myPin;
-        analogReference(EXTERNAL); 
     }
 
     void initialisatie() {
@@ -239,19 +245,19 @@ class KlimaatRegelaar {
         
         switch (seizoenNu) {
             case WINTER:
-                for (int i = 0; i < 7; i++) {
+                for (int i = 0; i < 8; i++) {
                     klimaatDataNu[plantenBakNummer][i] = customPlantenBakSettings[plantenBakNummer][WINTER][i];
                 }
                 klimaatDataNu[plantenBakNummer][SEIZOEN] = WINTER;
                 break;
             case ZOMER:
-                for (int i = 0; i < 7; i++) {
+                for (int i = 0; i < 8; i++) {
                     klimaatDataNu[plantenBakNummer][i] = customPlantenBakSettings[plantenBakNummer][ZOMER][i];
             }
                 klimaatDataNu[plantenBakNummer][SEIZOEN] = ZOMER;
                 break;
             case REGEN:
-                for (int i = 0; i < 7; i++) {
+                for (int i = 0; i < 8; i++) {
                     klimaatDataNu[plantenBakNummer][i] = customPlantenBakSettings[plantenBakNummer][REGEN][i];
                 }
                 klimaatDataNu[plantenBakNummer][SEIZOEN] = REGEN;
@@ -903,8 +909,9 @@ class TouchScreen {
             myGLCD.print(String("Soil"), 140, (i*71) + 2);
             myGLCD.print(String("Light"),140, (i*71) + 43);
             myGLCD.print(String("Daylight"), 200, (i*71) + 2);
-            myGLCD.print(String("Dew"), 260, (i*71) + 43);
-            myGLCD.print(String("Clouds"),200, (i*71) + 43);
+            myGLCD.print(String("Dew"), 250, (i*71) + 43);
+            myGLCD.print(String("Clouds"),190, (i*71) + 43);
+            myGLCD.print(String("Rain"),280, (i*71) + 43);
             myGLCD.setFont(SmallFont);
             myGLCD.print(String("min"), 6, (i*71) + 16);
             myGLCD.print(String("max"), 63, (i*71) + 16);
@@ -921,6 +928,9 @@ class TouchScreen {
             myGLCD.print(String(customPlantenBakSettings[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 55);
             myGLCD.print(String(customPlantenBakSettings[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
             myGLCD.print(String(customPlantenBakSettings[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 55);
+            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURREGEN]) + "H", 280, (i*71) + 55);
+            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURDAUW]) + "H", 240, (i*71) + 55);
+            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURBEWOLKING]) + "H", 200, (i*71) + 55);
             myGLCD.setFont(SmallFont);
             for(int j = 0; j <12; j++) {
                 myGLCD.setFont(SmallFont);
@@ -1126,8 +1136,8 @@ class TouchScreen {
                         Serial.print("maand geselecteerd");
                         betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                         customPlantenBakSettings[bak][3][j] = k;
-                        myGLCD.setColor(0,0,225);
-                        myGLCD.setBackColor(0,0,225);
+                        myGLCD.setColor(VGA_BLUE);
+                        myGLCD.setBackColor(VGA_BLUE);
                         for (int i = 0; i < 3; i++) {
                             myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
                             myGLCD.setColor(VGA_WHITE);
@@ -1158,6 +1168,8 @@ class TouchScreen {
                         
                         }
                     }
+                myGLCD.setColor(VGA_WHITE);
+                myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                 }
                 k = 1;
                 for(int j = 0; j <12; j++) {
@@ -1165,10 +1177,11 @@ class TouchScreen {
                         Serial.print("maand geselecteerd");
                         betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                         customPlantenBakSettings[bak][3][j] = k;
-                        myGLCD.setColor(235,0,0);
-                        myGLCD.setBackColor(235,0,0);
+                        myGLCD.setColor(VGA_RED);
+                        // myGLCD.setBackColor(235,0,0);
+                        myGLCD.setBackColor(VGA_RED);
                         for (int i = 0; i < 3; i++) {
-                            myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
+                            myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                             myGLCD.setColor(VGA_WHITE);
                             if(j== 0) 
                                 myGLCD.print("jan", 6, (i*71) + 29);
@@ -1196,6 +1209,8 @@ class TouchScreen {
                                 myGLCD.print("dec", 292, (i*71) + 29);
                         }
                     }
+                myGLCD.setColor(VGA_WHITE);
+                myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                 }
                 k = 2;
                 for(int j = 0; j <12; j++) {
@@ -1203,7 +1218,7 @@ class TouchScreen {
                         Serial.print("maand geselecteerd");
                         betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                         customPlantenBakSettings[bak][3][j] = k;
-                        myGLCD.setColor(VGA_SILVER);
+                        myGLCD.setColor(VGA_GRAY);
                         myGLCD.setBackColor(VGA_SILVER);
                         for (int i = 0; i < 3; i++) {
                             myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
@@ -1234,6 +1249,8 @@ class TouchScreen {
                                 myGLCD.print("dec", 292, (i*71) + 29);
                         }
                     }
+                myGLCD.setColor(VGA_WHITE);
+                myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
                 }
             }
         }        
@@ -1527,6 +1544,7 @@ Plantenbak plantenbak3(pinArray3, bakNummer3);
 
 void setup() {
     Serial.begin(57600);
+    analogReference(EXTERNAL); 
     klok.setup();
     touchScreen.setup();
     klimaatDataLogger.setup();
