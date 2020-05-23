@@ -3,7 +3,7 @@
 #include <UTFT.h>
 #include <URTouch.h>
 #include <UTFT_Buttons.h>  
-#include<SPI.h>
+#include <SPI.h>
 
 #define DAGTEMPERATUUR 0
 #define NACHTTEMPERATUUR 1
@@ -56,21 +56,20 @@
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 String datumTijd = "Nog niet";
+int currentPage; //indicates the page that is active on touchscreen
+
+
+volatile byte c;
+volatile byte j = 0;
+volatile byte i = 0;
+volatile bool flag1 = false; //weer false na iedere loop omdat startcode 1x moet worden opgestuurd, true als de startcode als laatste is ontvangen 
+volatile bool flag2 = false; //wordt true na uiwisseling laatste element array
 
 byte defaultPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 byte customPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
-int teVerzenden[144];
 
-volatile boolean received;
-volatile int slavereceived;
-volatile int slavesend[144];
+byte klimaatDataNu[3][31]= {{4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4},{5,5,5,5,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5},{6,6,6,6,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,6,6,6,6}};
 
-
-
-boolean settingschanged = false;
-int currentPage; //indicates the page that is active on touchscreen
-int klimaatDataNu[3][31];
- 
 class TouchScreen {
     
     UTFT myGLCD;
@@ -828,121 +827,75 @@ class TouchScreen {
         }
     }
 };
-
-class KlimaatDataLogger {
-    
-    File myFile;
-    int csPin = 53;
-    String naamFile = "datafile.txt";
-    
-    public:
-    KlimaatDataLogger() :
-        myFile()
-    {
-        pinMode(53, OUTPUT);
-    }
-
-    void setup() {
-        Serial.begin(9600);
-        Serial.print("Initializing card...");
-        if (!SD.begin(csPin)) {
-            Serial.println("initialization of the SD card failed!");
-            return;
+class DataUitwisselaarSlave {
+  
+  public:
+  DataUitwisselaarSlave(){
+    pinMode(MISO, OUTPUT);// have to send on master in, *slave out*
+    SPCR |= _BV(SPE);  // turn on SPI in slave mode
+    SPCR |= _BV(SPIE); // turn on interrupts
+  } 
+  
+  void updatKlimaatDataArray(){
+    if (flag2 == true){//voledige boodschap ontavangen
+      for (int k = 0; k < 3; k++){
+        for (int l = 0; l < 31; l++){
+          Serial.print(klimaatDataNu[k][l]);
         }
-        Serial.println("initialization of the SDcard is done.");
-        Serial.print("Creating file named: ");
-        Serial.print(naamFile);
-        myFile = SD.open(naamFile, FILE_WRITE);
+        Serial.println();
+      }
+      Serial.println();
+      Serial.println("================");
+      flag1 = false;
+      flag2 = false;
     }
-    
-    void writeToFile(String data) {
-        myFile = SD.open(naamFile, FILE_WRITE);
-        if (myFile) {
-            myFile.println(data);
-            int size = myFile.size();
-            Serial.print("FileSize = ");
-            Serial.println(size);
-            myFile.close();
-        }   else {
-                // if the file didn't open, report an error:
-                Serial.println("error opening the text file!");
-            }
-    }
-
-    void readFromFile() {
-        myFile = SD.open(naamFile);
-        Serial.println(naamFile);
-        if (myFile) {
-            Serial.println("datafile.txt bevat het volgende:");
-            // read all the text written on the file
-            while (myFile.available()) {
-                //Serial.write(myFile.read());
-                //Serial.end();
-                String list = String(myFile.readStringUntil('\n'));
-                //Serial.begin();
-                Serial.print("De eerste regel van de file");
-                Serial.println(list);
-                Serial.print("De volgende regel van de file");
-            }
-            // close the file:
-            myFile.close();
-        }   else {
-                // if the file didn't open, report an error:
-                Serial.println("error opening the text file!");
-            }
-    }
-
-   
+  }
 };
+  
+  ISR (SPI_STC_vect){
+       
+    c = SPDR;
+    if (flag1 == false){ //flag1 is true tijdens de uitwisseling van het array en wordt weer false na voltooiing loop
+      if (c == 0xCD){ //als de startcode werd ontvangen
+        SPDR = 0xEF; //teruggezonden startcode voor Master
+        i = 0;
+        j = 0;
+       flag1 = true; //startcode ontvangen, na eerste keer geen startcode meer terugsturen
+     }
+   } else {
+      if (c == 0xF3){
+        SPDR = SPDR = klimaatDataNu[i][j];
+      } else {
+          if (i < 3){
+            klimaatDataNu[i][j] = c;
+            j++;
+            SPDR = klimaatDataNu[i][j];
+            if (j == 31){
+              j = 0;
+              i++;
+              if (i == 3){
+                flag2 = true;
+              }
+            }
+          }
+        }
+     }
+  }
 
-
-
-KlimaatDataLogger klimaatDataLogger;
+DataUitwisselaarSlave dataUitwisselaarSlave;
 TouchScreen touchScreen;
 
-
-void setup() {
-    Serial.begin(57400);
-    touchScreen.setup();
-    klimaatDataLogger.setup();
-    
-    pinMode(MISO,OUTPUT);                   //Sets MISO as OUTPUT (Have to Send data to Master IN 
-    SPCR |= _BV(SPE);                       //Turn on SPI in Slave Mode
-    received = false;
-    SPI.attachInterrupt();                  //Interuupt ON is set for SPI commnucation
-  
+void setup (void){
+  Serial.begin (9600);
 }
 
-ISR (SPI_STC_vect)                        //Inerrrput routine function 
-{
-  slavereceived = SPDR;         // Value received from master if store in variable slavereceived
-  received = true;                        //Sets received as True 
-}
-
-void loop() { 
-    if(received) {
-        Serial.println("currentPage =");
-        Serial.println(currentPage);
-        //datumTijd = extraheren uit ingekomen array
-        if(currentPage == 1 or currentPage == 0) { ///waar komt die nul vandaan????????
-            touchScreen.toonStartScherm(datumTijd);
-        }
-        while (currentPage == 1) {
-            touchScreen.kiesPlantenBak();
-            break;
-        }
-        if (settingschanged = true) {
-            for (int k = 1; k < 4; k++) {
-                for (int j = 1; j < 5; j++) {
-                    for (int i = 1; i < 13; i++) {
-                        SPDR = customPlantenBakSettings[k][j][i];
-                    }
-                }
-            }    
-        }
-        received = false; //zelf bedacht, moet dit hier wel??????????  
+void loop(){
+  dataUitwisselaarSlave.updatKlimaatDataArray();
+  if(currentPage == 1 or currentPage == 0) { ///waar komt die nul vandaan????????
+        touchScreen.toonStartScherm(datumTijd);
     }
-   
-    klimaatDataLogger.writeToFile("hier moet een string");
-    klimaatDataLogger.readFromFile();                
+     while (currentPage == 1) {
+        touchScreen.kiesPlantenBak();
+        break;
+    }
 }
