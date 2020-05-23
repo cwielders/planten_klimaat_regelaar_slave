@@ -68,7 +68,7 @@ volatile bool flag2 = false; //wordt true na uiwisseling laatste element array
 byte defaultPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 byte customPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 
-byte klimaatDataNu[3][31]= {{4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4},{5,5,5,5,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5},{6,6,6,6,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,6,6,6,6}};
+byte klimaatDataNu[3][31]= {{4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4},{5,5,5,5,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5},{6,6,6,6,3,3,3,3,3,3,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,6,6,6,6}};
 
 class TouchScreen {
     
@@ -101,7 +101,7 @@ class TouchScreen {
     void toonStartScherm(String myDatumTijd) {
         Serial.println("begin toonstartscherm");
         currentPage = 1;
-        
+        Serial.println(myDatumTijd);
         Serial.print("currentPage = ");
         Serial.println(currentPage);
         myGLCD.clrScr();
@@ -124,6 +124,8 @@ class TouchScreen {
                     seizoen = REGEN;
                     break;
             }
+            Serial.print("het seizoen is:");
+            Serial.println(seizoen);
             myGLCD.fillRoundRect(2, (i*71) + 2, 318, (i*71) + 71);
             myGLCD.setColor(VGA_WHITE);
             myGLCD.drawRoundRect(2, (i*71) + 2, 318, (i*71) + 71);
@@ -800,11 +802,12 @@ class TouchScreen {
     }
 
     void kiesPlantenBak() {
-        
+
         int gekozenBak = 3; //3 is niet bestaandebestaande plantenbak
+        Serial.println("in kiezen plantenbak = ");
+        //Serial.println(gekozenBak);
         if (currentPage == 1 && myTouch.dataAvailable()) {
-    Serial.print("currentPage = ");
-    Serial.println(currentPage);
+            Serial.println("aangeraakt in kiezen plantenbak = ");
             myTouch.read();
             x=myTouch.getX();
             y=myTouch.getY();
@@ -827,6 +830,7 @@ class TouchScreen {
         }
     }
 };
+
 class DataUitwisselaarSlave {
   
   public:
@@ -887,15 +891,26 @@ TouchScreen touchScreen;
 
 void setup (void){
   Serial.begin (9600);
+  touchScreen.setup();
 }
 
 void loop(){
-  dataUitwisselaarSlave.updatKlimaatDataArray();
-  if(currentPage == 1 or currentPage == 0) { ///waar komt die nul vandaan????????
+    dataUitwisselaarSlave.updatKlimaatDataArray();
+    if(currentPage == 1 or currentPage == 0) { ///waar komt die nul vandaan????????
         touchScreen.toonStartScherm(datumTijd);
     }
-     while (currentPage == 1) {
+    int teller = 25;
+    while (currentPage == 1 or currentPage == 0 and teller>0) {
         touchScreen.kiesPlantenBak();
-        break;
+        teller = teller-1;
     }
+    // delay(10000);
+
 }
+//  int minuut = tijd.Minute();
+//     int minuutNu = tijd.Minute();
+//     while (currentPage == 1 && minuutNu == minuut) {
+//         touchScreen.kiesPlantenBak();
+//         RtcDateTime nieuweTijd = klok.getTime();
+//         minuutNu = nieuweTijd.Minute();
+//     }
