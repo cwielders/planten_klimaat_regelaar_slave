@@ -58,12 +58,7 @@ extern uint8_t SmallFont[];
 String datumTijd = "Nog niet";
 int currentPage; //indicates the page that is active on touchscreen
 
-
-volatile byte c;
-volatile byte j = 0;
-volatile byte i = 0;
-volatile bool flag1 = false; //weer false na iedere loop omdat startcode 1x moet worden opgestuurd, true als de startcode als laatste is ontvangen 
-volatile bool flag2 = false; //wordt true na uiwisseling laatste element array
+int SS2 = 10;
 
 byte defaultPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
 byte customPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
@@ -826,67 +821,52 @@ class TouchScreen {
                 gekozenBak = 2;
                 betast(2, 147, 315, 212);
                 tekenSettingsScherm(gekozenBak);
+
             }
         }
     }
 };
 
-class DataUitwisselaarSlave {
+class DataUitwisselaarMaster {
   
   public:
-  DataUitwisselaarSlave(){
-    pinMode(MISO, OUTPUT);// have to send on master in, *slave out*
-    SPCR |= _BV(SPE);  // turn on SPI in slave mode
-    SPCR |= _BV(SPIE); // turn on interrupts
-  } 
-  
-  void updatKlimaatDataArray(){
-    if (flag2 == true){//voledige boodschap ontavangen
-      for (int k = 0; k < 3; k++){
-        for (int l = 0; l < 31; l++){
-          Serial.print(klimaatDataNu[k][l]);
+  DataUitwisselaarMaster() {
+    pinMode(SS2, OUTPUT);
+    digitalWrite(SS2, HIGH);  // ensure SS stays high for now
+    SPI.begin ();// Put SCK, MOSI, SS pins into output mode// also put SCK, MOSI into LOW state, and SS into HIGH state// Then put SPI hardware into Master mode and turn SPI on
+    SPI.setClockDivider(SPI_CLOCK_DIV8); // Slow down the master a bit
+  }  
+  void zendOntvangData(){
+    byte b;
+    digitalWrite(SS2, LOW);// enable Slave Select
+    delayMicroseconds (200);
+    byte z = SPI.transfer (0xCD); //Verzend startcode 0xCD voor Slave
+    delayMicroseconds(20); //give the slave time to process
+    byte x = SPI.transfer (0xF3); //0xEF is pumped to get response byte from slave
+    delayMicroseconds(20); //give the slave time to process
+    Serial.print("de ontvangen respons is: ");
+     Serial.println(x);
+      if (x == 0xEF){
+        for ( byte i = 0 ; i < 3 ; i++){
+          for (byte j = 0 ; j < 31 ; j++){
+            b = (klimaatDataNu[i][j]);
+            byte y = SPI.transfer (b);
+            delayMicroseconds(20); //give the slave time to process
+            klimaatDataNu[i][j] = y;
+            Serial.print(klimaatDataNu[i][j]);
+          }
+          Serial.println();
         }
-        Serial.println();
       }
-      Serial.println();
-      Serial.println("================");
-      flag1 = false;
-      flag2 = false;
-    }
+  
+    digitalWrite(SS2, HIGH); // disable Slave Select
+    delay(2000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Serial.println();
+    Serial.println("=================");
   }
 };
-  
-  ISR (SPI_STC_vect){
-       
-    c = SPDR;
-    if (flag1 == false){ //flag1 is true tijdens de uitwisseling van het array en wordt weer false na voltooiing loop
-      if (c == 0xCD){ //als de startcode werd ontvangen
-        SPDR = 0xEF; //teruggezonden startcode voor Master
-        i = 0;
-        j = 0;
-       flag1 = true; //startcode ontvangen, na eerste keer geen startcode meer terugsturen
-     }
-   } else {
-      if (c == 0xF3){
-        SPDR = SPDR = klimaatDataNu[i][j];
-      } else {
-          if (i < 3){
-            klimaatDataNu[i][j] = c;
-            j++;
-            SPDR = klimaatDataNu[i][j];
-            if (j == 31){
-              j = 0;
-              i++;
-              if (i == 3){
-                flag2 = true;
-              }
-            }
-          }
-        }
-     }
-  }
 
-DataUitwisselaarSlave dataUitwisselaarSlave;
+DataUitwisselaarMaster dataUitwisselaarMaster;
 TouchScreen touchScreen;
 
 void setup (void){
@@ -895,22 +875,16 @@ void setup (void){
 }
 
 void loop(){
-    dataUitwisselaarSlave.updatKlimaatDataArray();
+    Serial.print("nieuwe loop");
+    dataUitwisselaarMaster.zendOntvangData();
+    
     if(currentPage == 1 or currentPage == 0) { ///waar komt die nul vandaan????????
         touchScreen.toonStartScherm(datumTijd);
     }
-    int teller = 25;
-    while (currentPage == 1 or currentPage == 0 and teller>0) {
+    int teller = 30;//zorgt er voor dat het scherm langer gevoelig is
+    while ((currentPage == 1 or currentPage == 0) && teller > 0) {
         touchScreen.kiesPlantenBak();
         teller = teller-1;
+        Serial.print(teller);
     }
-    // delay(10000);
-
 }
-//  int minuut = tijd.Minute();
-//     int minuutNu = tijd.Minute();
-//     while (currentPage == 1 && minuutNu == minuut) {
-//         touchScreen.kiesPlantenBak();
-//         RtcDateTime nieuweTijd = klok.getTime();
-//         minuutNu = nieuweTijd.Minute();
-//     }
