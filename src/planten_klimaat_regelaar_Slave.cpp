@@ -5,42 +5,44 @@
 #include <UTFT_Buttons.h>  
 #include <SPI.h>
 
-#define DAGTEMPERATUUR 0
-#define NACHTTEMPERATUUR 1
-#define LUCHTVOCHTIGHEID 2
-#define WATERGEVEN 3
-#define LAMPENVERVANGEN 4
-#define DUURDAUW 5
-#define DUURREGEN 6
-#define DUURBEWOLKING 7
+#define SEIZOEN 0
+#define JAAR 1
+#define MAAND 2
+#define DAG 3
+#define UUR 4
+#define MINUUT 5
+#define SECONDE 6
+#define DAGTEMPERATUUR 7
+#define NACHTTEMPERATUUR 8
+#define LUCHTVOCHTIGHEID 9
+#define POTVOCHTIGHEID 10
+#define LAMPENVERVANGEN 11
+#define DUURDAUW 12
+#define DUURREGEN 13
+#define DUURBEWOLKING 14
+#define DUURDAG 15
+#define STARTDAG 16
+#define EINDDAG 17
+#define STARTDAUW 18
+//EINDDAUW
+#define STARTREGEN 19
+#define EINDREGEN 20
+#define ISDAG 21
+#define ISREGEN 22
+#define ISDAUW 23
 
-
-#define DUURDAG 8
-#define STARTDAG 9
-#define EINDDAG 10
-#define STARTDAUW 11
-#define STARTREGEN 12
-#define EINDREGEN 13
-#define SEIZOEN 14
-#define VENTILATOR 15
-#define VERNEVELAAR 16
-#define TEMPERATUUR 17
+#define VENTILATORAAN 15
+#define VERNEVELAARAAN 16
+#define TEMPERATUURNU 17
 #define LUCHTVOCHTIGHEIDNU 18
-#define POTVOCHTIGHEID 19
-#define LICHT 20
+#define POTVOCHTIGHEIDNU 19
+#define LICHT 20 //NU
 #define LAMPENAAN1 21
 #define LAMPENAAN2 22
-#define JAAR 23
-#define MAAND 24
-#define DAG 25
-#define UUR 26
-#define MINUUT 27
+
 #define PLANTENBAKNUMMER 28
 #define HOOGSTEPOTVOCHTIGHEID 29
 #define MEESTELICHT 30
-#define ISDAG 31
-#define ISREGEN 32
-#define ISDAUW 33
 
 #define WINTER 0
 #define ZOMER 1
