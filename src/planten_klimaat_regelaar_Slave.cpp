@@ -1,892 +1,598 @@
 #include <Arduino.h>
+#include <Wire.h> // must be included here so that Arduino library object file references work (clock)
+#include <RtcDS3231.h>
+
 #include <SD.h>
-#include <UTFT.h>
-#include <URTouch.h>
-#include <UTFT_Buttons.h>  
-#include <SPI.h>
 
-#define SEIZOEN 0
-#define JAAR 1
-#define MAAND 2
-#define DAG 3
-#define UUR 4
-#define MINUUT 5
-#define SECONDE 6
-#define DAGTEMPERATUUR 7
-#define NACHTTEMPERATUUR 8
-#define LUCHTVOCHTIGHEID 9
-#define POTVOCHTIGHEID 10
-#define LAMPENVERVANGEN 11
-#define DUURDAUW 12
-#define DUURREGEN 13
-#define DUURBEWOLKING 14
-#define DUURDAG 15
-#define STARTDAG 16
-#define EINDDAG 17
-#define STARTDAUW 18
-//EINDDAUW
-#define STARTREGEN 19
-#define EINDREGEN 20
-#define ISDAG 21
-#define ISREGEN 22
-#define ISDAUW 23
+#include <DHT.h>
+#include <DHT_U.h>
 
-#define VENTILATORAAN 15
-#define VERNEVELAARAAN 16
-#define TEMPERATUURNU 17
-#define LUCHTVOCHTIGHEIDNU 18
-#define POTVOCHTIGHEIDNU 19
-#define LICHT 20 //NU
-#define LAMPENAAN1 21
-#define LAMPENAAN2 22
+#include<SPI.h>  //to get the meaning of MISO                                                                
 
-#define PLANTENBAKNUMMER 28
-#define HOOGSTEPOTVOCHTIGHEID 29
-#define MEESTELICHT 30
+#define DAGTEMPERATUUR 0
+#define NACHTTEMPERATUUR 1
+#define LUCHTVOCHTIGHEID 2
+//#define LUCHTVOCHTIGHEIDDAG 2
+//#define LUCHTVOCHTIGHEIDNACHT 3
+#define POTVOCHTIGHEID 3
+#define DUURDAUW 4
+#define DUURREGEN 5
+#define DUURBEWOLKING 6
+#define DUURDAG 7
+
+#define LAMPENVERVANGEN 8
+#define SEIZOEN 9
+#define JAAR 10
+#define MAAND 11
+#define DAG 12
+#define UUR 13
+#define MINUUT 14
+#define SECONDE 15
+#define TEMPERATUURNU 16
+#define LUCHTVOCHTIGHEIDNU 17
+#define POTVOCHTIGHEIDNU 18
+#define LICHTNU 19
+#define LAMPENAAN1 20
+#define LAMPENAAN2 21
+#define VENTILATORAAN 22
+#define VERNEVELAARAAN 23
+#define ISDAUW 24
+#define ISREGEN 25
+#define ISDAG 26
+#define ISBEWOLKING 27
+
+#define HOOGSTEPOTVOCHTIGHEID 28
+#define MEESTELICHT 29
+#define WATERGEVEN 30
+
+//klimaatDataNu[plantenBakNummer][STARTDAG] = is hardcoded 8
+// #define STARTDAG 32
+// #define EINDDAG 33
+// #define STARTDAUW 34
+// #define STARTREGEN 35
+// #define EINDREGEN 36
+// #define STARTBEWOLKING 37
+// #define EINDBEWOLKING 38
+// #define PLANTENBAKNUMMER 8
+//#define ZONOP 39
+//define ZONONDER 40
+
 
 #define WINTER 0
 #define ZOMER 1
 #define REGEN 2
 
-#define CHIANGMAI 0
-#define MANAUS 1
-#define SUMATRA 2
+volatile byte c;
+volatile byte j = 0;
+volatile byte i = 0;
+volatile bool flag1 = false; //weer false na iedere loop omdat startcode 1x moet worden opgestuurd, true als de startcode als laatste is ontvangen 
+volatile bool flag2 = false; //wordt true na uiwisseling laatste element array
 
-//volgende regel is voor tijdweergave klok
-#define countof(a) (sizeof(a) / sizeof(a[0]))
+byte pinArray1[8] = {A0, 9, A1, 24, 25, 20, 8, 27}; 
+byte pinArray2[8] = {A2, 11, A3, 24, 25, 20, 10, 27};
+byte pinArray3[8] = {A4, 13, A5, 24, 25, 20, 12, 27};
 
-extern uint8_t BigFont[];
-extern uint8_t SmallFont[];
-String datumTijd = "Nog niet";
-int currentPage; //indicates the page that is active on touchscreen
+byte klimaatDataNu[3][31]= {{0,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},{1,5,5,5,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},{2,6,6,6,3,3,3,3,3,3,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3}};
 
-int SS2 = 10;
+class LichtSensor {
 
-byte defaultPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
-byte customPlantenBakSettings[3][4][12] = {{{25, 14, 60, 20, 75, 3, 0, 0, 11, 8}, {35, 28, 55, 10, 75, 2, 0, 0, 12, 8}, {30, 25, 35, 80, 4, 5, 85, 4, 1,13, 8}, {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 0}}, {{8, 21, 20, 14, 4, 0, 70, 1, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 1, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 1, 20, 75}, {1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1}}, {{8, 21, 20, 14, 4, 0, 70, 2, 20, 75}, {8, 22, 30, 20, 4, 1, 55, 2, 20, 75}, {8, 23, 35, 30, 4, 5, 85, 2, 20, 75}, {2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2}}};
-
-byte klimaatDataNu[3][31]= {{4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4},{5,5,5,5,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5},{6,6,6,6,3,3,3,3,3,3,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,6,6,6,6}};
-
-class TouchScreen {
-    
-    UTFT myGLCD;
-    URTouch myTouch;
-    UTFT_Buttons myButtons;
-    
-    int x, y;
-    char stCurrent[2]="";
-    int stCurrentLen=0;
-    char stLast[2]=""; 
+    int pin;
+    float rawRange = 1024;
+    float logRange = 5.0;
 
     public:
-    TouchScreen() :
-    myGLCD(CTE32_R2,38,39,40,41),
-    myTouch( 6, 5, 4, 3, 2),
-    myButtons(&myGLCD, &myTouch)
-    {}
-
-    void setup() {
-        
-        myGLCD.InitLCD();
-        myGLCD.clrScr();
-        myGLCD.setFont(BigFont);
-        myTouch.InitTouch();
-        myTouch.setPrecision(PREC_MEDIUM);
-        currentPage = 1; // Indicates wich screen is active
+    LichtSensor(int myPin) {
+        pin = myPin;
     }
 
-    void toonStartScherm(String myDatumTijd) {
-        Serial.println("begin toonstartscherm");
-        currentPage = 1;
-        Serial.println(myDatumTijd);
-        Serial.print("currentPage = ");
-        Serial.println(currentPage);
-        myGLCD.clrScr();
-        int seizoen;
-        for (int i = 0; i < 3; i++) {
-            switch (klimaatDataNu[i][SEIZOEN]) {
-                case WINTER :
-                    myGLCD.setColor(VGA_BLUE);
-                    myGLCD.setBackColor(VGA_BLUE);
-                    seizoen = WINTER;
-                    break;
-                case ZOMER :
-                    myGLCD.setColor(VGA_RED);
-                    myGLCD.setBackColor(VGA_RED);
-                    seizoen = ZOMER;
-                    break;
-                case REGEN : 
-                    myGLCD.setColor(VGA_GRAY);
-                    myGLCD.setBackColor(VGA_GRAY);
-                    seizoen = REGEN;
-                    break;
-            }
-            Serial.print("het seizoen is:");
-            Serial.println(seizoen);
-            myGLCD.fillRoundRect(2, (i*71) + 2, 318, (i*71) + 71);
-            myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect(2, (i*71) + 2, 318, (i*71) + 71);
-            myGLCD.setFont(SmallFont);
-            myGLCD.print(String("Temperature"), 6, (i*71) +6);
-            myGLCD.print(String("Humidity"), 6, (i*71) + 39);
-            myGLCD.print(String("Soil"), 140, (i*71) + 6);
-            myGLCD.print(String("Light"),140, (i*71) + 39);
-            myGLCD.print(String(customPlantenBakSettings[i][seizoen][NACHTTEMPERATUUR]) + "/", 6, (i*71) + 21);
-            myGLCD.print(String("/") + String(customPlantenBakSettings[i][seizoen][DAGTEMPERATUUR]), 76, (i*71) + 21);
-            myGLCD.print(String("/") + String(customPlantenBakSettings[i][seizoen][LUCHTVOCHTIGHEID]), 53, (i*71) + 53);
-            myGLCD.print(String("/") + String(customPlantenBakSettings[i][seizoen][WATERGEVEN]), 190, (i*71) + 21);
-            myGLCD.print(String("/") + String(customPlantenBakSettings[i][seizoen][LAMPENVERVANGEN]), 190, (i*71) + 53);
-            myGLCD.setColor(VGA_YELLOW);
-            if(klimaatDataNu[i][ISDAUW] == 1) {
-                myGLCD.print(String("Dew"), 265, (i*71) + 21);
-            }
-            if(klimaatDataNu[i][ISREGEN] == 1) {
-                myGLCD.print(String("Rain"), 265, (i*71) + 39);
-            }
-            if(klimaatDataNu[i][ISDAG] == 1) {
-                myGLCD.print(String("Day"), 265, (i*71) + 6);
-            }   else {
-                myGLCD.print(String("Night"), 265, (i*71) + 6);
-            }
-            if (klimaatDataNu[i][SEIZOEN] == WINTER) {
-                myGLCD.print(String("Winter"), 265, (i*71) + 55);
-            }   
-            if (klimaatDataNu[i][SEIZOEN] == ZOMER) {
-                myGLCD.print(String("Summer"), 265, (i*71) + 55);
-            } 
-            if (klimaatDataNu[i][SEIZOEN] == REGEN) {
-                myGLCD.print(String("Wet"), 265, (i*71) + 55);
-            }
-            myGLCD.setFont(BigFont);
-            myGLCD.setColor(VGA_YELLOW);
-            myGLCD.print(String(klimaatDataNu[i][TEMPERATUUR]), 28, (i*71) + 18);
-            myGLCD.print(String("C"), 60, (i*71) + 18);
-            myGLCD.fillCircle(61, (i*71) + 19, 2);
-            myGLCD.print(String(klimaatDataNu[i][LUCHTVOCHTIGHEIDNU]) + "%", 5, (i*71) + 51);
-            myGLCD.print(String(klimaatDataNu[i][POTVOCHTIGHEID]) + "%", 140, (i*71) + 18);
-            myGLCD.print(String(klimaatDataNu[i][LICHT]) + "%", 140, (i*71) + 51);
-        }
-        myGLCD.setColor(VGA_WHITE);
-        myGLCD.setBackColor(VGA_BLACK);
-        myGLCD.setFont(BigFont);
-        myGLCD.print(myDatumTijd, CENTER, 220);
+    void initialisatie() {
+        Serial.println("lichtsensor geinitialiseerd");
+        Serial.print("lichtsensorpin = ");
+        Serial.println(pin);
     }
-
-    void tekenSettingsOverzicht(int bak) {
-        myGLCD.clrScr();
-        for (int i = 0; i < 3; i++) {
-            if(i == 0) {
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.setFont(BigFont);
-                myGLCD.print("WINTER", 205, 51 + (i*71));
-                myGLCD.setColor(VGA_BLUE);
-                myGLCD.setBackColor(VGA_BLUE);
-            }  
-            if(i == 1) { 
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.setFont(BigFont);
-                myGLCD.print("SUMMER", 205, 51 + (i*71));
-                myGLCD.setColor(VGA_RED);
-                myGLCD.setBackColor(VGA_RED);
-            }
-            if(i == 2) { 
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.setFont(BigFont);
-                myGLCD.print("RAIN", 221, 51 + (i*71));
-                myGLCD.setColor(VGA_GRAY);
-                myGLCD.setBackColor(VGA_GRAY);
-            }
-            myGLCD.fillRoundRect(1, (i*71) + 1, 318, (i*71) + 71);
-            myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect (1, (i*71) + 1, 318, (i*71) + 71);
-            myGLCD.setFont(SmallFont);
-            myGLCD.print(String("Temperature"), 6, (i*71) + 2);
-            myGLCD.print(String("Humidity"), 6, (i*71) + 43);
-            myGLCD.print(String("Soil"), 140, (i*71) + 2);
-            myGLCD.print(String("Light"),140, (i*71) + 43);
-            myGLCD.print(String("Daylight"), 200, (i*71) + 2);
-            myGLCD.print(String("Dew"), 250, (i*71) + 43);
-            myGLCD.print(String("Clouds"),190, (i*71) + 43);
-            myGLCD.print(String("Rain"),280, (i*71) + 43);
-            myGLCD.setFont(SmallFont);
-            myGLCD.print(String("min"), 6, (i*71) + 16);
-            myGLCD.print(String("max"), 63, (i*71) + 16);
-            myGLCD.print(String("start"), 232, (i*71) + 16);
-            myGLCD.print(String("average"), 6, (i*71) + 58);
-            myGLCD.setFont(BigFont);
-            myGLCD.setColor(VGA_YELLOW);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][NACHTTEMPERATUUR]), 29, (i*71) + 13);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][DAGTEMPERATUUR]), 85, (i*71) + 13);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURDAG]), 200, (i*71) + 13);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][STARTDAG])+ String("H"), 270, (i*71) + 13);
-            myGLCD.print(String("C"), 115, (i*71) + 13);
-            myGLCD.fillCircle(116, (i*71) + 15, 2);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 55);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 55);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURREGEN]) + "H", 280, (i*71) + 55);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURDAUW]) + "H", 240, (i*71) + 55);
-            myGLCD.print(String(customPlantenBakSettings[bak][i][DUURBEWOLKING]) + "H", 200, (i*71) + 55);
-            myGLCD.setFont(SmallFont);
-            for(int j = 0; j <12; j++) {
-                myGLCD.setFont(SmallFont);
-                switch (customPlantenBakSettings[bak][3][j]) {
-                case WINTER :
-                    myGLCD.setColor(0,0,225);
-                    myGLCD.setBackColor(0,0,225);
-                    myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
-                    myGLCD.setColor(VGA_WHITE);
-                    if(j== 0)
-                        myGLCD.print(String("jan"), 6, (i*71) + 29);
-                    if(j==1) 
-                        myGLCD.print(String("feb"), 32, (i*71) + 29);
-                    if(j==2) 
-                        myGLCD.print(String("mar"), 58, (i*71) + 29);
-                    if(j==3)
-                        myGLCD.print(String("apr"), 84, (i*71) + 29);
-                    if(j==4)
-                        myGLCD.print(String("may"), 110, (i*71) + 29);
-                    if(j==5)
-                        myGLCD.print(String("jun"), 136, (i*71) + 29);
-                    if(j==6)
-                        myGLCD.print(String("jul"), 162, (i*71) + 29);
-                    if(j==7)
-                        myGLCD.print(String("aug"), 188, (i*71) + 29);
-                    if(j==8)
-                        myGLCD.print(String("sep"), 214, (i*71) + 29);
-                    if(j==9)
-                        myGLCD.print(String("oct"), 240, (i*71) + 29);
-                    if(j==10)
-                        myGLCD.print(String("nov"), 266, (i*71) + 29);
-                    if(j==11)
-                        myGLCD.print(String("dec"), 292, (i*71) + 29);
-                    break;
-                case ZOMER :
-                    myGLCD.setColor(235,0,0);
-                    myGLCD.setBackColor(235,0,0);
-                    myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
-                    myGLCD.setColor(VGA_WHITE);
-                    if(j== 0) 
-                        myGLCD.print("jan", 6, (i*71) + 29);
-                    if(j==1)
-                        myGLCD.print("feb", 32, (i*71) + 29);
-                    if(j==2)
-                        myGLCD.print("mar", 58, (i*71) + 29);
-                    if(j==3)
-                        myGLCD.print("apr", 84, (i*71) + 29);
-                    if(j==4)
-                        myGLCD.print("may", 110, (i*71) + 29);
-                    if(j==5)
-                        myGLCD.print("jun", 136, (i*71) + 29);
-                    if(j==6)
-                        myGLCD.print("jul", 162, (i*71) + 29);
-                    if(j==7)
-                        myGLCD.print("aug", 188, (i*71) + 29);
-                    if(j==8)
-                        myGLCD.print("sep", 214, (i*71) + 29);
-                    if(j==9)
-                        myGLCD.print("oct", 240, (i*71) + 29);
-                    if(j==10)
-                        myGLCD.print("nov", 266, (i*71) + 29);
-                    if(j==11)
-                        myGLCD.print("dec", 292, (i*71) + 29);
-                    break;
-                case REGEN : 
-                    myGLCD.setColor(VGA_SILVER);
-                    myGLCD.setBackColor(VGA_SILVER);
-                    myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
-                    myGLCD.setColor(VGA_WHITE);
-                    if(j== 0)
-                        myGLCD.print("jan", 6, (i*71) + 29);
-                    if(j==1)
-                        myGLCD.print("feb", 32, (i*71) + 29);
-                    if(j==2)
-                        myGLCD.print("mar", 58, (i*71) + 29);
-                    if(j==3)
-                        myGLCD.print("apr", 84, (i*71) + 29);
-                    if(j==4)
-                        myGLCD.print("may", 110, (i*71) + 29);
-                    if(j==5)
-                        myGLCD.print("jun", 136, (i*71) + 29);
-                    if(j==6)
-                        myGLCD.print("jul", 162, (i*71) + 29);
-                    if(j==7)
-                        myGLCD.print("aug", 188, (i*71) + 29);
-                    if(j==8)
-                        myGLCD.print("sep", 214, (i*71) + 29);
-                    if(j==9)
-                        myGLCD.print("oct", 240, (i*71) + 29);
-                    if(j==10)
-                        myGLCD.print("nov", 266, (i*71) + 29);
-                    if(j==11)
-                        myGLCD.print("dec", 292, (i*71) + 29);
-                    break;
-                }
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.drawRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
-            }          
-        } 
-    }
-
-    void tekenSettingsManipulatieScherm (int bak) {
-        tekenSettingsOverzicht(bak);
-        int variable;
-        currentPage = 3;
-    Serial.print("currentPage = ");
-    Serial.println(currentPage);
-        myGLCD.setColor(VGA_BLACK);
-        myGLCD.setBackColor(VGA_BLACK);
-        myGLCD.fillRoundRect(2, 215, 80, 238);
-        myGLCD.fillRoundRect(82, 215, 160, 238);
-        myGLCD.fillRoundRect(162, 215, 240, 238);
-        myGLCD.fillRoundRect(242, 215, 318, 238);
-        myGLCD.setColor(VGA_WHITE);
-        myGLCD.drawRoundRect(2, 215, 80, 238);
-        myGLCD.drawRoundRect(82, 215, 160, 238);
-        myGLCD.drawRoundRect(162, 215, 240, 238);
-        myGLCD.drawRoundRect(242, 215, 318, 238);
-        myGLCD.print("Back", 266, 221);
-        myGLCD.print("Chiang", 5, 221);
-        myGLCD.print("Mai", 58, 221);
-        myGLCD.print("Manaus", 99, 221);
-        myGLCD.print("Sumatra", 175, 221);
-        while (currentPage == 3) {
-            if (currentPage == 3 && myTouch.dataAvailable()) {
-                myTouch.read();
-                x=myTouch.getX();
-                y=myTouch.getY();
-                if ((y>=210) && (y<=240)) {
-                    if ((x>=0) && (x<=80)) {
-                        betast(2, 215, 80, 238);
-                        for(int i=0; i<4; i++) {
-                            for(int j=0; j<12; j++) {
-                                customPlantenBakSettings[bak][i][j] = defaultPlantenBakSettings[CHIANGMAI][i][j];
-                            }
-                        }
-                        tekenSettingsManipulatieScherm(bak);
-                        //toonStartScherm("changmai");
-                    }
-                    if ((x>=80) && (x<=160)) {
-                        betast(2, 215, 80, 238);
-                        for(int i=0; i<3; i++) {
-                            for(int j=0; j<12; j++) {
-                                customPlantenBakSettings[bak][i][j] = defaultPlantenBakSettings[MANAUS][i][j];
-                            }
-                        }
-                        //toonStartScherm("minaus");
-                        tekenSettingsManipulatieScherm(bak);
-                    }
-                    if ((x>=160) && (x<=240)) {
-                        betast(2, 215, 80, 238);
-                        for(int i=0; i<3; i++) {
-                            for(int j=0; j<12; j++) {
-                                customPlantenBakSettings[bak][i][j] = defaultPlantenBakSettings[SUMATRA][i][j];
-                            }
-                        }
-                        tekenSettingsManipulatieScherm(bak);
-                    }
-                    if ((x>=240) && (x<=320)) {
-                        betast(242, 215, 318, 238);
-                        //String test = "nogmaals";
-                        //toonStartScherm(test);
-                        currentPage = 0;
-                        break;
-                    }
-                }
-                for(int i=0;i<3;i++) {
-                    int seizoen = i;
-                    if ((y<=(i*71) + 29) && (y>=(i*71) + 13) && (x>=29 && x<=61)) { 
-                    drawButtons();
-                    variable = NACHTTEMPERATUUR;
-                    leesGetal(bak, seizoen, variable);
-                    }
-                    if ((y<=(i*71) + 29) && (y>=(i*71) + 13) && (x>=85 && x<=117)) { 
-                    drawButtons();
-                    variable = DAGTEMPERATUUR;
-                    leesGetal(bak, seizoen, variable);
-                    }
-                    if ((y<=(i*71) + 29) && (y>=(i*71) + 13) && (x>=200 && x<=232)) { 
-                    drawButtons();
-                    variable = DUURDAG;
-                    leesGetal(bak, seizoen, variable);
-                    }
-                    if ((y<=(i*71) + 29) && (y>=(i*71) + 13) && (x>=270 && x<=338)) { 
-                    drawButtons();
-                    variable = STARTDAG;
-                    leesGetal(bak, seizoen, variable);
-                    }
-                    if ((y<=(i*71) + 29) && (y>=(i*71) + 13) && (x>=140 && x<=172)) { 
-                    drawButtons();
-                    variable = WATERGEVEN;
-                    leesGetal(bak, seizoen, variable);
-                    }
-                    if ((y<=(i*71) + 71) && (y>=(i*71) + 55) && (x>=60 && x<=92)) { 
-                    drawButtons();
-                    variable = LUCHTVOCHTIGHEID;
-                    leesGetal(bak, seizoen, variable);
-                    }
-                }
-                int k = 0;
-                for(int j = 0; j <12; j++) {
-                    if (y>=(k*71) + 29 && y<=(k*71) + 42 && x>=(j*26) + 4 && x<=(j*26) + 30) { 
-                        Serial.print("maand geselecteerd");
-                        betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                        customPlantenBakSettings[bak][3][j] = k;
-                        myGLCD.setColor(VGA_BLUE);
-                        myGLCD.setBackColor(VGA_BLUE);
-                        for (int i = 0; i < 3; i++) {
-                            myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
-                            myGLCD.setColor(VGA_WHITE);
-                            if(j== 0)
-                                myGLCD.print("jan", 6, (i*71) + 29);
-                            if(j==1) 
-                                myGLCD.print("feb", 32, (i*71) + 29);
-                            if(j==2) 
-                                myGLCD.print("mar", 58, (i*71) + 29);
-                            if(j==3)
-                                myGLCD.print("apr", 84, (i*71) + 29);
-                            if(j==4)
-                                myGLCD.print("may", 110, (i*71) + 29);
-                            if(j==5)
-                                myGLCD.print("jun", 136, (i*71) + 29);
-                            if(j==6)
-                                myGLCD.print("jul", 162, (i*71) + 29);
-                            if(j==7)
-                                myGLCD.print("aug", 188, (i*71) + 29);
-                            if(j==8)
-                                myGLCD.print("sep", 214, (i*71) + 29);
-                            if(j==9)
-                                myGLCD.print("oct", 240, (i*71) + 29);
-                            if(j==10)
-                                myGLCD.print("nov", 266, (i*71) + 29);
-                            if(j==11)
-                                myGLCD.print("dec", 292, (i*71) + 29);
-                        
-                        }
-                    }
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                }
-                k = 1;
-                for(int j = 0; j <12; j++) {
-                    if (y>=(k*71) + 29 && y<=(k*71) + 42 && x>=(j*26) + 4 && x<=(j*26) + 30) { 
-                        Serial.print("maand geselecteerd");
-                        betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                        customPlantenBakSettings[bak][3][j] = k;
-                        myGLCD.setColor(VGA_RED);
-                        // myGLCD.setBackColor(235,0,0);
-                        myGLCD.setBackColor(VGA_RED);
-                        for (int i = 0; i < 3; i++) {
-                            myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                            myGLCD.setColor(VGA_WHITE);
-                            if(j== 0) 
-                                myGLCD.print("jan", 6, (i*71) + 29);
-                            if(j==1)
-                                myGLCD.print("feb", 32, (i*71) + 29);
-                            if(j==2)
-                                myGLCD.print("mar", 58, (i*71) + 29);
-                            if(j==3)
-                                myGLCD.print("apr", 84, (i*71) + 29);
-                            if(j==4)
-                                myGLCD.print("may", 110, (i*71) + 29);
-                            if(j==5)
-                                myGLCD.print("jun", 136, (i*71) + 29);
-                            if(j==6)
-                                myGLCD.print("jul", 162, (i*71) + 29);
-                            if(j==7)
-                                myGLCD.print("aug", 188, (i*71) + 29);
-                            if(j==8)
-                                myGLCD.print("sep", 214, (i*71) + 29);
-                            if(j==9)
-                                myGLCD.print("oct", 240, (i*71) + 29);
-                            if(j==10)
-                                myGLCD.print("nov", 266, (i*71) + 29);
-                            if(j==11)
-                                myGLCD.print("dec", 292, (i*71) + 29);
-                        }
-                    }
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                }
-                k = 2;
-                for(int j = 0; j <12; j++) {
-                    if (y>=(k*71) + 29 && y<=(k*71) + 42 && x>=(j*26) + 4 && x<=(j*26) + 30) { 
-                        Serial.print("maand geselecteerd");
-                        betast((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                        customPlantenBakSettings[bak][3][j] = k;
-                        myGLCD.setColor(VGA_GRAY);
-                        myGLCD.setBackColor(VGA_SILVER);
-                        for (int i = 0; i < 3; i++) {
-                            myGLCD.fillRoundRect((j*26) + 4, (i*71) + 29, (j*26) + 30, (i*71) + 42);
-                            myGLCD.setColor(VGA_WHITE);
-                            if(j== 0)
-                                myGLCD.print("jan", 6, (i*71) + 29);
-                            if(j==1)
-                                myGLCD.print("feb", 32, (i*71) + 29);
-                            if(j==2)
-                                myGLCD.print("mar", 58, (i*71) + 29);
-                            if(j==3)
-                                myGLCD.print("apr", 84, (i*71) + 29);
-                            if(j==4)
-                                myGLCD.print("may", 110, (i*71) + 29);
-                            if(j==5)
-                                myGLCD.print("jun", 136, (i*71) + 29);
-                            if(j==6)
-                                myGLCD.print("jul", 162, (i*71) + 29);
-                            if(j==7)
-                                myGLCD.print("aug", 188, (i*71) + 29);
-                            if(j==8)
-                                myGLCD.print("sep", 214, (i*71) + 29);
-                            if(j==9)
-                                myGLCD.print("oct", 240, (i*71) + 29);
-                            if(j==10)
-                                myGLCD.print("nov", 266, (i*71) + 29);
-                            if(j==11)
-                                myGLCD.print("dec", 292, (i*71) + 29);
-                        }
-                    }
-                myGLCD.setColor(VGA_WHITE);
-                myGLCD.drawRoundRect((j*26) + 4, (k*71) + 29, (j*26) + 30, (k*71) + 42);
-                }
-            }
-        }        
-    }       
     
-
-// myGLCD.print(String(plantenBakSettings1[bak][i][LUCHTVOCHTIGHEID]) + "%", 60, (i*71) + 55);
-// myGLCD.print(String(plantenBakSettings1[bak][i][WATERGEVEN]) + "%", 140, (i*71) + 13);
-// myGLCD.print(String(plantenBakSettings1[bak][i][LAMPENVERVANGEN]) + "%", 140, (i*71) + 55);
-    void tekenSettingsScherm(int bak) {
-         tekenSettingsOverzicht(bak);
-    Serial.println("begin tekenSettingsscherm");
-        currentPage = 2;
-        Serial.print("currentPage = ");
-        Serial.println(currentPage);
-            myGLCD.setColor(VGA_BLACK);
-            myGLCD.setBackColor(VGA_BLACK);
-            myGLCD.fillRoundRect(2, 215, 80, 238);
-            myGLCD.fillRoundRect(82, 215, 160, 238);
-            myGLCD.fillRoundRect(162, 215, 240, 238);
-            myGLCD.fillRoundRect(242, 215, 318, 238);
-            myGLCD.setColor(VGA_WHITE);
-            myGLCD.drawRoundRect(2, 215, 80, 238);
-            myGLCD.drawRoundRect(82, 215, 160, 238);
-            myGLCD.drawRoundRect(162, 215, 240, 238);
-            myGLCD.drawRoundRect(242, 215, 318, 238);
-            myGLCD.print("Back", 266, 221);
-            myGLCD.print("Settings", 10, 221);
-            while (currentPage == 2) {
-        
-        Serial.print("currentPage = ");
-        Serial.println(currentPage);
-                String test = "opnieuw";
-                if (currentPage ==2 && myTouch.dataAvailable()) {
-                    myTouch.read();
-                    x=myTouch.getX();
-                    y=myTouch.getY();
-                    if ((y>=210) && (y<=240)) { 
-                        if ((x>=0) && (x<=80)) {
-                            betast(2, 215, 80, 238);
-                            tekenSettingsManipulatieScherm(bak);
-                            break;;
-                        }
-                        if ((x>=80) && (x<=160)) {
-                            betast(82, 215, 160, 238);
-                            //break;
-                        }
-                        if ((x>=160) && (x<=240)) {
-                            betast(162, 215, 240, 238);
-                            //break;
-                        }
-                        if ((x>=240) && (x<=320)) {
-                            betast(242, 215, 318, 238);
-                            Serial.print("ikwas aangeraakt in settingsschermin ");
-                            //toonStartScherm(test);
-                            currentPage = 0;
-                            break;
-                        }
-                    }
-                }
-        }
+    // read the raw value from the light sensor:
+    float readRawValue() {
+        float rawValue = analogRead(pin);
+        delay(10);
+        rawValue = analogRead(pin);
+        return(rawValue);
     }
 
-    void drawButtons() {
-        currentPage = 4;
-    Serial.println("begin drawbuttons");
-    Serial.print("currentPage = ");
-    Serial.println(currentPage);
-        myGLCD.clrScr();
-        myGLCD.setFont(BigFont);
-        myGLCD.setBackColor(VGA_BLUE);
-        for (x=0; x<5; x++) {// Draw the upper row of buttons
-            myGLCD.setColor(0, 0, 255);
-            myGLCD.fillRoundRect (10+(x*60), 10, 60+(x*60), 60);
-            myGLCD.setColor(255, 255, 255);
-            myGLCD.drawRoundRect (10+(x*60), 10, 60+(x*60), 60);
-            myGLCD.printNumI(x+1, 27+(x*60), 27);
-        }
-   
-        for (x=0; x<5; x++) {  // Draw the center row of buttons
-            myGLCD.setColor(0, 0, 255);
-            myGLCD.fillRoundRect (10+(x*60), 70, 60+(x*60), 120);
-            myGLCD.setColor(255, 255, 255);
-            myGLCD.drawRoundRect (10+(x*60), 70, 60+(x*60), 120);
-            if (x<4)
-            myGLCD.printNumI(x+6, 27+(x*60), 87);
-        }
-        myGLCD.print("0", 267, 87); // Draw the lower row of buttons
-        myGLCD.setColor(0, 0, 255);
-        myGLCD.fillRoundRect (10, 130, 150, 180);
-        myGLCD.setColor(255, 255, 255);
-        myGLCD.drawRoundRect (10, 130, 150, 180);
-        myGLCD.print("Clear", 40, 147);
-        myGLCD.setColor(0, 0, 255);
-        myGLCD.fillRoundRect (160, 130, 300, 180);
-        myGLCD.setColor(255, 255, 255);
-        myGLCD.drawRoundRect (160, 130, 300, 180);
-        myGLCD.print("Enter", 190, 147);
-        myGLCD.setBackColor (0, 0, 0);
-        myGLCD.setBackColor(VGA_BLACK);
-        myGLCD.setColor(VGA_WHITE);
-        myGLCD.drawRoundRect(242, 215, 318, 238);
-        myGLCD.setFont(SmallFont);
-        myGLCD.print("Back", 266, 221);
+    // read the raw value from the light sensor:
+    float readLogValue() {
+        float rawValue = analogRead(pin);
+        float logLux = rawValue * logRange / rawRange;
+        float luxValue = pow(10, logLux);
+        return(luxValue);
     }
 
-    void updateStr(int val) {
-    if (stCurrentLen<20) {
-        stCurrent[stCurrentLen]=val;
-        stCurrent[stCurrentLen+1]='\0';
-        stCurrentLen++;
-        myGLCD.setColor(0, 255, 0);
-        myGLCD.print(stCurrent, LEFT, 224);
-    }   else {
-            myGLCD.setColor(255, 0, 0);
-            myGLCD.print("BUFFER FULL!", CENTER, 192);
-            delay(500);
-            myGLCD.print("            ", CENTER, 192);
-            delay(500);
-            myGLCD.print("BUFFER FULL!", CENTER, 192);
-            delay(500);
-            myGLCD.print("            ", CENTER, 192);
-            myGLCD.setColor(0, 255, 0);
-        }
+};
+
+class SoilHumiditySensor {
+
+    byte pin;
+    byte powerPin;
+
+    public:
+    SoilHumiditySensor(byte myPin, byte myPowerPin) {
+        pin = myPin;
+        powerPin = myPowerPin;
+        pinMode(powerPin, OUTPUT);//Set D2 as an OUTPUT
+        digitalWrite(powerPin, LOW);//Set to LOW so no power is flowing through the sensor
     }
 
-    void leesGetal(int plantbak, int seizoen, int kolom) {
-        Serial.println("begin leesgetal");
-        while (currentPage == 4) {
-            Serial.print("currentPage = ");
-            Serial.println(currentPage);
-            if (currentPage == 4 && myTouch.dataAvailable()) {
-                myTouch.read();
-                x=myTouch.getX();
-                y=myTouch.getY();
-                if ((y>=10) && (y<=60)) { // Upper row
-                    if ((x>=10) && (x<=60))  { // Button: 1
-                        betast(10, 10, 60, 60);
-                        updateStr('1');
-                    }
-                    if ((x>=70) && (x<=120)) { // Button: 2
-                        betast(70, 10, 120, 60);
-                        updateStr('2');
-                    }
-                    if ((x>=130) && (x<=180))  // Button: 3
-                    {
-                    betast(130, 10, 180, 60);
-                    updateStr('3');
-                    }
-                    if ((x>=190) && (x<=240))  // Button: 4
-                    {
-                    betast(190, 10, 240, 60);
-                    updateStr('4');
-                    }
-                    if ((x>=250) && (x<=300))  // Button: 5
-                    {
-                    betast(250, 10, 300, 60);
-                    updateStr('5');
-                    }
-                }
-
-                if ((y>=70) && (y<=120)) { // Center row
-                    if ((x>=10) && (x<=60))  {// Button: 6
-                        betast(10, 70, 60, 120);
-                        updateStr('6');
-                    }
-                    if ((x>=70) && (x<=120))  // Button: 7
-                    {
-                    betast(70, 70, 120, 120);
-                    updateStr('7');
-                    }
-                    if ((x>=130) && (x<=180))  // Button: 8
-                    {
-                    betast(130, 70, 180, 120);
-                    updateStr('8');
-                    }
-                    if ((x>=190) && (x<=240))  // Button: 9
-                    {
-                    betast(190, 70, 240, 120);
-                    updateStr('9');
-                    }
-                    if ((x>=250) && (x<=300))  // Button: 0
-                    {
-                    betast(250, 70, 300, 120);
-                    updateStr('0');
-                    }
-                }
-                if ((y>=130) && (y<=180))  {// Upper row
-                    if ((x>=10) && (x<=150))  {// Button: Clear
-                        betast(10, 130, 150, 180);
-                        stCurrent[0]='\0';
-                        stCurrentLen=0;
-                        myGLCD.setColor(0, 0, 0);
-                        myGLCD.fillRect(0, 224, 319, 239);
-                        }
-                        if ((x>=160) && (x<=300))  // Button: Enter
-                        {
-                        betast(160, 130, 300, 180);
-                        if (stCurrentLen>0) {
-                            for (x=0; x<stCurrentLen+1; x++)
-                            {
-                            stLast[x]=stCurrent[x];
-                            }
-                            stCurrent[0]='\0';
-                            stCurrentLen=0;
-                            myGLCD.setColor(0, 0, 0);
-                            myGLCD.fillRect(0, 208, 319, 239);
-                            myGLCD.setColor(0, 255, 0);
-                            myGLCD.print(String(stLast), LEFT, 208);
-                            int number = atoi(stLast);
-                            customPlantenBakSettings[plantbak][seizoen][kolom] = number;
-                            
-                            // stCurrent[2]="";
-                            // stCurrentLen=0;
-                            // stLast[2]=""; 
-                            tekenSettingsManipulatieScherm(plantbak); 
-                        }   else  {
-                                myGLCD.setColor(255, 0, 0);
-                                myGLCD.print("BUFFER EMPTY", CENTER, 192);
-                                delay(500);
-                                myGLCD.print("            ", CENTER, 192);
-                                delay(500);
-                                myGLCD.print("BUFFER EMPTY", CENTER, 192);
-                                delay(500);
-                                myGLCD.print("            ", CENTER, 192);
-                                myGLCD.setColor(0, 255, 0);
-                            }
-                        }
-                    }
-                }
-                if ((y>=210) && (y<=240)) {
-                    if ((x>=240) && (x<=320)) {
-                        betast(242, 215, 318, 238);
-                        tekenSettingsManipulatieScherm(plantbak);
-                    }
-                } 
-        }
+    void initialisatie() {
+        Serial.println("SoilHumiditySensor geinitialiseerd");
+        Serial.print("SoilHumiditySensorPin = ");
+        Serial.println(pin);
+        Serial.print("SoilHumiditySensorPowerPin = ");
+        Serial.println(powerPin);
     }
-
     
+    float readValue() {
+        digitalWrite(powerPin, HIGH);
+        delay(10);
+        float soilmoisture = analogRead(pin);
+        delay(10);
+        soilmoisture = analogRead(pin);
+        digitalWrite(powerPin, LOW);
+        return(soilmoisture);
+    } 
+};
 
+class LuchtVochtigheidTemperatuurSensor {
 
-// Draw a red frame while a button is touched
-    void betast(int x1, int y1, int x2, int y2) {
-        Serial.println("begin betast");
-        myGLCD.setColor(VGA_GREEN);
-        myGLCD.drawRoundRect (x1, y1, x2, y2);
-        while (myTouch.dataAvailable())
-            myTouch.read();
+    DHT dht;
+    byte pin;
+
+    public:
+    LuchtVochtigheidTemperatuurSensor(byte myPin) :
+        dht(myPin, DHT22) 
+        {
+            dht.begin();
+            pin = myPin;
+        }
+
+    void initialisatie() {
+        Serial.println("LuchtVochtigheidTemperatuurSensor geinitialiseerd");
+        Serial.print("LuchtVochtigheidTemperatuurSensorPin = ");
+        Serial.println(pin);
     }
 
-    void kiesPlantenBak() {
+    float readTempValue() {
+        Serial.print("nieuwe temp meting");
+        return(dht.readTemperature());
+    }
 
-        int gekozenBak = 3; //3 is niet bestaandebestaande plantenbak
-        Serial.println("in kiezen plantenbak = ");
-        //Serial.println(gekozenBak);
-        if (currentPage == 1 && myTouch.dataAvailable()) {
-            Serial.println("aangeraakt in kiezen plantenbak = ");
-            myTouch.read();
-            x=myTouch.getX();
-            y=myTouch.getY();
-            if ((y>=10) && (y<=70)) { // bovenste bak
-                gekozenBak = 0;
-                betast(2, 5, 315, 70);
-                tekenSettingsScherm(gekozenBak);
-            }
-            if ((y>=73) && (y<=143)) {// middelste bak
-                gekozenBak = 1;
-                betast(2, 76, 315, 141);
-                tekenSettingsScherm(gekozenBak);
-                
-            }
-            if ((y>=130) && (y<=180)) { // Button: 3
-                gekozenBak = 2;
-                betast(2, 147, 315, 212);
-                tekenSettingsScherm(gekozenBak);
-
-            }
-        }
+    float readHumidityValue() {
+        Serial.print("nieuwe humidity meting");
+        return(dht.readHumidity());    //Print temp and humidity values to serial monitor
     }
 };
 
-class DataUitwisselaarMaster {
+class KlimaatRegelaar {
+    
+    byte lampenPin1;
+    byte lampenPin2;
+    byte nevelPin;
+    byte ventilatorPin;
+    int plantenBakNummer;
+    boolean ventilatorIsAan = false;
+    boolean vernevelaarIsAan = false;
+    boolean lampIsAan1 = false;
+    boolean lampIsAan2 = false;
+    boolean luchtIsDroog = false;
+    boolean dag = false;
+    boolean dauw = false;
+    boolean regen = false;
+
+    public:
+    KlimaatRegelaar(byte myLampenPin1, byte myLampenPin2, byte myNevelPin, byte myVentilatorPin, int myPlantenBakNummer) {
+        plantenBakNummer = myPlantenBakNummer;
+        lampenPin1 = myLampenPin1;
+        lampenPin2 = myLampenPin2;
+        nevelPin = myNevelPin;
+        ventilatorPin = myNevelPin;
+        pinMode(lampenPin1, OUTPUT);
+        digitalWrite(lampenPin1, LOW);
+        pinMode(lampenPin2, OUTPUT);
+        digitalWrite(lampenPin1, LOW);
+        pinMode(nevelPin, OUTPUT);
+        digitalWrite(nevelPin, LOW);
+        pinMode(ventilatorPin, OUTPUT);
+        digitalWrite(nevelPin, LOW);
+        digitalWrite(ventilatorPin, LOW);
+        }
+
+    void initialisatie() {
+        Serial.println("KlimaatRegelaar geinitialiseerd");
+        Serial.print("lampenPin1 = ");
+        Serial.println(lampenPin1);
+        Serial.print("lampenPin1 = ");
+        Serial.println(lampenPin2);
+        Serial.print("nevelPin = ");
+        Serial.println(nevelPin);
+        Serial.print("ventilatorPin = ");
+        Serial.println(ventilatorPin);
+        Serial.println();
+    }
+
+    void doeJeKlimaatDing() {
+        Serial.print("plantenBakNummer = ");
+        Serial.println(plantenBakNummer);
+        regelLicht();
+        regelDauw();
+        regelRegenWolken();
+        regelVochtigheid();
+        regelTemperatuur();
+        standen();
+    }
+    
+    void regelLicht() {
+        if (!dag && klimaatDataNu[plantenBakNummer][ISDAG]) {
+            digitalWrite(lampenPin1, HIGH);
+            digitalWrite(lampenPin2, HIGH);
+            Serial.println("Lampen aangeschakeld");
+            dag = true;
+            lampIsAan2 = true;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            lampIsAan1 = true;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN1] = lampIsAan1;
+        }
+        if (dag && !klimaatDataNu[plantenBakNummer][ISDAG]) {
+            digitalWrite(lampenPin1, LOW); 
+            digitalWrite(lampenPin2, LOW); 
+            Serial.println("Lampen uitgeschakeld");
+            dag = false;
+            lampIsAan2 = false;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            lampIsAan1 = false;
+            klimaatDataNu[plantenBakNummer][LAMPENAAN1] = lampIsAan1;
+        }
+    }
+
+    void regelRegenWolken() {
+        // In volgende regel 100 aanpassen op basis van resultaten
+        if (!regen && klimaatDataNu[plantenBakNummer][ISREGEN] && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < 100) {
+            if (!vernevelaarIsAan && (klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.println("vernevelaar aan (regenwolken)");
+                vernevelaarIsAan = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+                regen = true;
+            }    
+            if (lampIsAan2) {
+                digitalWrite(lampenPin2, LOW);
+                Serial.println("lampen2 uit (regenwolken)");
+                lampIsAan2 = false;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            }
+        }
+
+        if (regen && (!klimaatDataNu[plantenBakNummer][ISREGEN]||klimaatDataNu[plantenBakNummer][TEMPERATUURNU] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+            regen = false;
+            if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID]) {
+                digitalWrite(nevelPin, LOW); 
+                Serial.println("vernevelaar uit (regenwolken)"); 
+                regen = false;
+                vernevelaarIsAan = false;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+            }  
+            if (!lampIsAan2 && klimaatDataNu[plantenBakNummer][ISDAG]) {
+                digitalWrite(lampenPin2, HIGH); 
+                Serial.println("lampen2 aan (regenwolken)"); 
+                lampIsAan2 = true;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            }
+        }
+    }
+    
+    void regelDauw() {
+        if (!dauw && klimaatDataNu[plantenBakNummer][ISDAUW]) {
+            if (!vernevelaarIsAan && klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.println("vernevelaar aan (dauw)");
+                vernevelaarIsAan = true;
+                dauw = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+                }    
+            if (!ventilatorIsAan && klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+                digitalWrite(ventilatorPin, HIGH);
+                Serial.println("ventilator aan (dauw)");
+                ventilatorIsAan = true;
+                klimaatDataNu[plantenBakNummer][VENTILATORAAN] = ventilatorIsAan;
+                }
+        }
+
+        if (dauw && (klimaatDataNu[plantenBakNummer][ISDAUW]|| klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR])) {
+            if (vernevelaarIsAan && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID]) {
+                digitalWrite(nevelPin, LOW); 
+                Serial.println("vernevelaar uit (dauw)"); 
+                vernevelaarIsAan = false;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+            }  
+            if (ventilatorIsAan) {
+                digitalWrite(ventilatorPin, LOW); 
+                Serial.println("ventilator uit (dauw)"); 
+                ventilatorIsAan = false;
+                klimaatDataNu[plantenBakNummer][VENTILATORAAN] = ventilatorIsAan;
+            }
+        dauw = false;
+        }
+    }
+
+    void regelVochtigheid() {
+
+        if (!luchtIsDroog && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] < klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] && klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+            luchtIsDroog = true;
+            if (!vernevelaarIsAan) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.println("vernevelaar aan (luchtvochtigheid)");
+                vernevelaarIsAan = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+            } 
+        }
+        if (vernevelaarIsAan && !dauw && !regen && (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU]  > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] || klimaatDataNu[plantenBakNummer][TEMPERATUURNU] < klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR] || klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > 100)) {
+            luchtIsDroog = false;
+            digitalWrite(nevelPin, LOW);
+            Serial.print("vernevelaar uit (luchtvochtigheid)");
+            vernevelaarIsAan = false;
+            klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+        }
+        if (luchtIsDroog && klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] ) { 
+            luchtIsDroog = false;    
+        }
+        if (klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] > klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEID] && klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][NACHTTEMPERATUUR]) {
+            luchtIsDroog = false;
+            if (!ventilatorIsAan) {
+                digitalWrite(ventilatorPin, HIGH);
+                Serial.println("ventilator aan (luchtvochtigheid)");
+                ventilatorIsAan = true;
+                klimaatDataNu[plantenBakNummer][VENTILATORAAN] = ventilatorIsAan;
+            } 
+        }
+    }
+
+    void regelTemperatuur(){
+
+        if (klimaatDataNu[plantenBakNummer][TEMPERATUURNU] > klimaatDataNu[plantenBakNummer][DAGTEMPERATUUR]) {
+            if (!ventilatorIsAan) {
+                digitalWrite(ventilatorPin, HIGH);
+                Serial.print("vernevelaar aan (temperatuur)");
+                ventilatorIsAan = true;
+                klimaatDataNu[plantenBakNummer][VENTILATORAAN] = ventilatorIsAan;
+            }
+            if (lampIsAan2) {
+                digitalWrite(lampenPin2, LOW);
+                Serial.println("lampen2 uit (temperatuur)");
+                lampIsAan2 = false;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            }
+            if (!vernevelaarIsAan) {
+                digitalWrite(nevelPin, HIGH);
+                Serial.print("vernevelaar aan (temperatuur)");
+                vernevelaarIsAan = true;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+            }
+        }
+        if (klimaatDataNu[plantenBakNummer][TEMPERATUURNU] < klimaatDataNu[plantenBakNummer][DAGTEMPERATUUR]) {
+            if (ventilatorIsAan && !dauw) {
+                digitalWrite(ventilatorPin, LOW);
+                Serial.print("vernevelaar uit (temperatuur)");
+                ventilatorIsAan = false;
+                klimaatDataNu[plantenBakNummer][VENTILATORAAN] = ventilatorIsAan;
+            }
+            if (!lampIsAan2 && !regen && dag) {
+                digitalWrite(lampenPin2, HIGH);
+                Serial.println("lampen2 aan (temperatuur)");
+                lampIsAan2 = true;
+                klimaatDataNu[plantenBakNummer][LAMPENAAN2] = lampIsAan2;
+            }
+            if (vernevelaarIsAan && !dauw && !regen && !luchtIsDroog) {
+                digitalWrite(nevelPin, LOW);
+                Serial.print("vernevelaar uit (temperatuur)");
+                vernevelaarIsAan = false;
+                klimaatDataNu[plantenBakNummer][VERNEVELAARAAN] = vernevelaarIsAan;
+            }
+        }
+    }
+
+    void standen() {
+        Serial.print("plantenBakNummer = " );
+        Serial.println(plantenBakNummer);
+        Serial.print("isDag = ");
+        Serial.println(dag);
+        Serial.print("vernevelaarIsAan = ");
+        Serial.println(vernevelaarIsAan);
+        Serial.print("isDauw = ");
+        Serial.println(dauw);
+        Serial.print("ventilatorIsAan = ");
+        Serial.println(ventilatorIsAan);
+        Serial.print("isRegenWolk = ");
+        Serial.println(regen);
+        Serial.print("lampenAan2 = ");
+        Serial.println(lampIsAan2);
+        Serial.print("luchtIsDroog = ");
+        Serial.println(luchtIsDroog);
+        
+    }
+};
+
+class Plantenbak {
+
+    KlimaatRegelaar klimaatRegelaar;
+    SoilHumiditySensor soilHumiditySensor;
+    LuchtVochtigheidTemperatuurSensor luchtVochtigheidTemperatuurSensor;
+    LichtSensor lichtSensor;
+    boolean ventilatorIsUit = true;
+    boolean vernevelaarIsUit = true;
+    int plantenBakNummer;
+    int maxPotVocht; //gelijkstellen aan getlal gemeten na ingebruikname
+    int maxLicht; //gelijkstellen aan getlal gemeten na ingebruikname
+    
+    public:
+    Plantenbak(byte (&myPins)[8], int myPlantenBakNummer) :
+        soilHumiditySensor(myPins[0], myPins[1]),
+        lichtSensor(myPins[2]),
+        luchtVochtigheidTemperatuurSensor(myPins[6]),
+        klimaatRegelaar(myPins[3] , myPins[7], myPins[5], myPins[4], myPlantenBakNummer),
+        plantenBakNummer(myPlantenBakNummer)
+    {
+    }
+    //1soilsensorPin1, 2soilPower1, 3lightsensorPin1, 4lampenPin1, 5ventilatorpin1, 6vernevelaarpin1, 7dhtpin1
+
+    void setup() {
+
+        Serial.print("plantenBakNummer = ");
+        Serial.println(plantenBakNummer);
+        lichtSensor.initialisatie();
+        soilHumiditySensor.initialisatie();
+        luchtVochtigheidTemperatuurSensor.initialisatie();
+        klimaatRegelaar.initialisatie();
+        Serial.println("plantenbak geinitialseerd");
+    }
+
+    void regelKlimaat(int plantenBakNummer) {
+        Serial.print("plantenBakNummer in plantenBak regelKlimaat = ");
+        Serial.println(plantenBakNummer);
+        float luchtVochtigheid = luchtVochtigheidTemperatuurSensor.readHumidityValue();
+        klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] = luchtVochtigheid;
+        Serial.print("Humidity = ");
+        Serial.println(luchtVochtigheid);
+        Serial.println(luchtVochtigheidTemperatuurSensor.readHumidityValue());
+        float temperatuur = luchtVochtigheidTemperatuurSensor.readTempValue();
+        Serial.print(" %, Temp  ");
+        klimaatDataNu[plantenBakNummer][TEMPERATUURNU] = temperatuur;
+        //Serial.print(" %, Temp  ");
+        Serial.print(temperatuur);
+        Serial.println(" Celsius");
+        if (isnan(luchtVochtigheid) || isnan(temperatuur)) {
+            Serial.println(F("Failed to read from DHT sensor!"));
+            return;
+        }
+        Serial.println(luchtVochtigheidTemperatuurSensor.readTempValue());
+        int potVochtigheid = soilHumiditySensor.readValue();
+        if(potVochtigheid > maxPotVocht) {
+            maxPotVocht = potVochtigheid;
+            klimaatDataNu[plantenBakNummer][HOOGSTEPOTVOCHTIGHEID] = potVochtigheid;
+        }
+        klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU] = potVochtigheid;
+        //klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU] = (potVochtigheid/maxPotVocht)*99; //100% past niet op display
+        Serial.print("Soil Moisture = ");  
+        Serial.println(potVochtigheid);
+        Serial.print("Soil Moisture = ");  
+        Serial.println((potVochtigheid/maxPotVocht)*99);//100% past niet op display
+        Serial.print("in klimaatdatanu ");
+        Serial.println(klimaatDataNu[plantenBakNummer][POTVOCHTIGHEID]);
+        int licht = lichtSensor.readLogValue();
+        if(licht > maxLicht) {
+            maxLicht = licht;
+            klimaatDataNu[plantenBakNummer][MEESTELICHT] = licht;
+        }
+        //klimaatDataNu[plantenBakNummer][LICHT] = (licht/maxLicht)*99;//100% past niet op display
+        klimaatDataNu[plantenBakNummer][LICHTNU] = licht;
+        Serial.print("Licht = ");
+        Serial.println(licht);
+        Serial.print("in klimaatdatanu");
+        Serial.println(klimaatDataNu[plantenBakNummer][LICHTNU]);
+        Serial.println((licht/maxLicht)*99); //100% past niet op display
+        klimaatRegelaar.doeJeKlimaatDing();
+    }  
+};
+
+
+class DataUitwisselaarSlave {
   
   public:
-  DataUitwisselaarMaster() {
-    pinMode(SS2, OUTPUT);
-    digitalWrite(SS2, HIGH);  // ensure SS stays high for now
-    SPI.begin ();// Put SCK, MOSI, SS pins into output mode// also put SCK, MOSI into LOW state, and SS into HIGH state// Then put SPI hardware into Master mode and turn SPI on
-    SPI.setClockDivider(SPI_CLOCK_DIV8); // Slow down the master a bit
-  }  
-  void zendOntvangData(){
-    byte b;
-    digitalWrite(SS2, LOW);// enable Slave Select
-    delayMicroseconds (200);
-    byte z = SPI.transfer (0xCD); //Verzend startcode 0xCD voor Slave
-    delayMicroseconds(20); //give the slave time to process
-    byte x = SPI.transfer (0xF3); //0xEF is pumped to get response byte from slave
-    delayMicroseconds(20); //give the slave time to process
-    Serial.print("de ontvangen respons is: ");
-     Serial.println(x);
-      if (x == 0xEF){
-        for ( byte i = 0 ; i < 3 ; i++){
-          for (byte j = 0 ; j < 31 ; j++){
-            b = (klimaatDataNu[i][j]);
-            byte y = SPI.transfer (b);
-            delayMicroseconds(20); //give the slave time to process
-            klimaatDataNu[i][j] = y;
-            Serial.print(klimaatDataNu[i][j]);
-          }
-          Serial.println();
-        }
-      }
+  DataUitwisselaarSlave(){
+    pinMode(MISO, OUTPUT);// have to send on master in, *slave out*
+    SPCR |= _BV(SPE);  // turn on SPI in slave mode
+    SPCR |= _BV(SPIE); // turn on interrupts
+  } 
   
-    digitalWrite(SS2, HIGH); // disable Slave Select
-    delay(2000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    Serial.println();
-    Serial.println("=================");
+  void updatKlimaatDataArray(){
+      Serial.println("in update klimaatdataarray");
+      Serial.print("flag2 = ");
+      Serial.println(flag2);
+    if (flag2 == true){//voledige boodschap ontavangen
+      for (int k = 0; k < 3; k++){
+        for (int l = 0; l < 31; l++){
+          Serial.print(klimaatDataNu[k][l]);
+        }
+        Serial.println();
+      }
+      Serial.println();
+      Serial.println("================");
+      flag2 = false;
+    }
   }
 };
 
-DataUitwisselaarMaster dataUitwisselaarMaster;
-TouchScreen touchScreen;
-
-void setup (void){
-  Serial.begin (9600);
-  touchScreen.setup();
+ISR (SPI_STC_vect){
+    c = SPDR;
+    if (flag1 == false){ //flag1 is true tijdens de uitwisseling van het array en wordt weer false na voltooiing loop
+      if (c == 0xCD){ //als de startcode werd ontvangen    0xEF=239 0xCD=205 0xF3=243
+        SPDR = 0xEF; //teruggezonden startcode voor Master 0xEF=239
+        i = 0;
+        j = 0;
+       flag1 = true; //startcode ontvangen, na eerste keer geen startcode meer terugsturen
+    }
+    } else {
+        if (c == 0xF3){//0xF3=243
+            SPDR = klimaatDataNu[i][j];
+        } else {
+            if (i < 3){
+                klimaatDataNu[i][j] = c;
+                j++;
+                SPDR = klimaatDataNu[i][j];
+                //j moet kleiner dan 31 zijn
+                if (j == 31){
+                    j = 0;
+                    i++;
+                    if (i == 3){
+                        flag2 = true;
+                        flag1 = false;
+                        for ( byte i = 0 ; i < 3 ; i++){
+                            for (byte j = 0 ; j < 31 ; j++){
+                                Serial.print(klimaatDataNu[i][j]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
-void loop(){
-    Serial.print("nieuwe loop");
-    dataUitwisselaarMaster.zendOntvangData();
+DataUitwisselaarSlave dataUitwisselaarSlave;
+
+int bakNummer1 = 0;
+Plantenbak plantenbak1(pinArray1, bakNummer1);
+int bakNummer2 = 1;
+Plantenbak plantenbak2(pinArray2, bakNummer2);
+int bakNummer3 = 2;
+Plantenbak plantenbak3(pinArray3, bakNummer3);
+
+void setup() {
+    Serial.begin(9600);
+    analogReference(EXTERNAL); 
+    plantenbak1.setup();
+    plantenbak2.setup();
+    plantenbak3.setup();
+}
+
+void loop() {
     
-    if(currentPage == 1 or currentPage == 0) { ///waar komt die nul vandaan????????
-        touchScreen.toonStartScherm(datumTijd);
-    }
-    int teller = 30;//zorgt er voor dat het scherm langer gevoelig is
-    while ((currentPage == 1 or currentPage == 0) && teller > 0) {
-        touchScreen.kiesPlantenBak();
-        teller = teller-1;
-        Serial.print(teller);
-    }
+    Serial.println("begin loop slave");
+
+    plantenbak1.regelKlimaat(bakNummer1);
+    plantenbak2.regelKlimaat(bakNummer2);
+    plantenbak3.regelKlimaat(bakNummer3);
+
+    dataUitwisselaarSlave.updatKlimaatDataArray();
+
+    delay(5000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Serial.println();
+    Serial.println("end of loop Slave");   
 }
