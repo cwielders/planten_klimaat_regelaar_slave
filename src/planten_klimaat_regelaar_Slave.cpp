@@ -503,30 +503,30 @@ class Plantenbak {
 
 
 class DataUitwisselaarSlave {
-  
-  public:
-  DataUitwisselaarSlave(){
-    pinMode(MISO, OUTPUT);// have to send on master in, *slave out*
-    SPCR |= _BV(SPE);  // turn on SPI in slave mode
-    SPCR |= _BV(SPIE); // turn on interrupts
-  } 
-  
-  void updatKlimaatDataArray(){
-      Serial.println("in update klimaatdataarray");
-      Serial.print("flag2 = ");
-      Serial.println(flag2);
-    if (flag2 == true){//voledige boodschap ontavangen
-      for (int k = 0; k < 3; k++){
-        for (int l = 0; l < 31; l++){
-          Serial.print(klimaatDataNu[k][l]);
+
+    public:
+    DataUitwisselaarSlave(){
+        pinMode(MISO, OUTPUT);// have to send on master in, *slave out*
+        SPCR |= _BV(SPE);  // turn on SPI in slave mode
+        SPCR |= _BV(SPIE); // turn on interrupts
+    } 
+    
+    void updatKlimaatDataArray(){
+        Serial.println("in update klimaatdataarray");
+        Serial.print("flag2 = ");
+        Serial.println(flag2);
+        if (flag2 == true){//voledige boodschap ontavangen
+        for (int k = 0; k < 3; k++){
+            for (int l = 0; l < 31; l++){
+            Serial.print(klimaatDataNu[k][l]);
+            }
+            Serial.println();
         }
         Serial.println();
-      }
-      Serial.println();
-      Serial.println("================");
-      flag2 = false;
+        Serial.println("================");
+        flag2 = false;
+        }
     }
-  }
 };
 
 ISR (SPI_STC_vect){
@@ -545,8 +545,9 @@ ISR (SPI_STC_vect){
             if (i < 3){
                 klimaatDataNu[i][j] = c;
                 j++;
-                SPDR = klimaatDataNu[i][j];
-                //j moet kleiner dan 31 zijn
+                if (j < 31){
+                    SPDR = klimaatDataNu[i][j];
+                }
                 if (j == 31){
                     j = 0;
                     i++;
@@ -583,16 +584,16 @@ void setup() {
 }
 
 void loop() {
-    
-    Serial.println("begin loop slave");
+    if (flag2 == true){
+        Serial.println("begin loop slave");
 
-    plantenbak1.regelKlimaat(bakNummer1);
-    plantenbak2.regelKlimaat(bakNummer2);
-    plantenbak3.regelKlimaat(bakNummer3);
+        plantenbak1.regelKlimaat(bakNummer1);
+        plantenbak2.regelKlimaat(bakNummer2);
+        plantenbak3.regelKlimaat(bakNummer3);
 
-    dataUitwisselaarSlave.updatKlimaatDataArray();
-
-    delay(5000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    Serial.println();
-    Serial.println("end of loop Slave");   
+        dataUitwisselaarSlave.updatKlimaatDataArray();
+        // delay(5000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        Serial.println();
+        Serial.println("end of loop Slave");
+    }   
 }
