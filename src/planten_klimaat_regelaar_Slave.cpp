@@ -530,14 +530,15 @@ class DataUitwisselaarSlave {
 };
 
 ISR (SPI_STC_vect){
+    Serial.print("In SPI");
     c = SPDR;
     if (flag1 == false){ //flag1 is true tijdens de uitwisseling van het array en wordt weer false na voltooiing loop
-      if (c == 0xCD){ //als de startcode werd ontvangen    0xEF=239 0xCD=205 0xF3=243
-        SPDR = 0xEF; //teruggezonden startcode voor Master 0xEF=239
-        i = 0;
-        j = 0;
-       flag1 = true; //startcode ontvangen, na eerste keer geen startcode meer terugsturen
-    }
+        if (c == 0xCD){ //als de startcode werd ontvangen    0xEF=239 0xCD=205 0xF3=243
+            SPDR = 0xEF; //teruggezonden startcode voor Master 0xEF=239
+            i = 0;
+            j = 0;
+        flag1 = true; //startcode ontvangen, na eerste keer geen startcode meer terugsturen
+            }
     } else {
         if (c == 0xF3){//0xF3=243
             SPDR = klimaatDataNu[i][j];
@@ -584,7 +585,7 @@ void setup() {
 }
 
 void loop() {
-    if (flag2 == true){
+    //if (flag2 == true){
         Serial.println("begin loop slave");
 
         plantenbak1.regelKlimaat(bakNummer1);
@@ -592,8 +593,8 @@ void loop() {
         plantenbak3.regelKlimaat(bakNummer3);
 
         dataUitwisselaarSlave.updatKlimaatDataArray();
-        // delay(5000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        delay(5000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         Serial.println();
         Serial.println("end of loop Slave");
-    }   
+    //}   
 }
