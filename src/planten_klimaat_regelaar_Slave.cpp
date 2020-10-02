@@ -9,54 +9,31 @@
 
 #include<SPI.h>  //to get the meaning of MISO                                                                
 
+
+
 #define DAGTEMPERATUUR 0
 #define NACHTTEMPERATUUR 1
 #define LUCHTVOCHTIGHEID 2
-//#define LUCHTVOCHTIGHEIDDAG 2
-//#define LUCHTVOCHTIGHEIDNACHT 3
-#define POTVOCHTIGHEID 3
-#define DUURDAUW 4
-#define DUURREGEN 5
-#define DUURBEWOLKING 6
-#define DUURDAG 7
+#define ISDAG 3
+#define ISDAUW 4
+#define ISBEWOLKING 5
+#define ISREGEN 6
+#define ISPOMP 7
+#define RESERVE1 8
+#define RESERVE2 9
 
-#define LAMPENVERVANGEN 8
-#define SEIZOEN 9
-#define JAAR 10
-#define MAAND 11
-#define DAG 12
-#define UUR 13
-#define MINUUT 14
-#define SECONDE 15
-#define TEMPERATUURNU 16
-#define LUCHTVOCHTIGHEIDNU 17
-#define POTVOCHTIGHEIDNU 18
-#define LICHTNU 19
-#define LAMPENAAN1 20
-#define LAMPENAAN2 21
-#define VENTILATORAAN 22
-#define VERNEVELAARAAN 23
-#define ISDAUW 24
-#define ISREGEN 25
-#define ISDAG 26
-#define ISBEWOLKING 27
-
-#define HOOGSTEPOTVOCHTIGHEID 28
-#define MEESTELICHT 29
-#define WATERGEVEN 30
-
-//klimaatDataNu[plantenBakNummer][STARTDAG] = is hardcoded 8
-// #define STARTDAG 32
-// #define EINDDAG 33
-// #define STARTDAUW 34
-// #define STARTREGEN 35
-// #define EINDREGEN 36
-// #define STARTBEWOLKING 37
-// #define EINDBEWOLKING 38
-// #define PLANTENBAKNUMMER 8
+#define TEMPERATUURNU 10
+#define LUCHTVOCHTIGHEIDNU 11
+#define POTVOCHTIGHEIDNU 12
+#define LICHTNU 13
+#define WATERSTANDNU 14
+#define LAMPENAAN1 15
+#define LAMPENAAN2 16
+#define VENTILATORAAN 17
+#define VERNEVELAARAAN 18
+#define RESERVE3 19
 //#define ZONOP 39
-//define ZONONDER 40
-
+//#define ZONONDER 40
 
 #define WINTER 0
 #define ZOMER 1
@@ -72,7 +49,7 @@ byte pinArray1[8] = {A0, 9, A1, 24, 25, 20, 8, 27};
 byte pinArray2[8] = {A2, 11, A3, 24, 25, 20, 10, 27};
 byte pinArray3[8] = {A4, 13, A5, 24, 25, 20, 12, 27};
 
-byte klimaatDataNu[3][31]= {{0,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},{1,5,5,5,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},{2,6,6,6,3,3,3,3,3,3,0,0,0,0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3}};
+byte klimaatDataNu[3][20]= {{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19},{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19},{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}};
 
 class LichtSensor {
 
@@ -475,7 +452,7 @@ class Plantenbak {
         int potVochtigheid = soilHumiditySensor.readValue();
         if(potVochtigheid > maxPotVocht) {
             maxPotVocht = potVochtigheid;
-            klimaatDataNu[plantenBakNummer][HOOGSTEPOTVOCHTIGHEID] = potVochtigheid;
+            //klimaatDataNu[plantenBakNummer][HOOGSTEPOTVOCHTIGHEID] = potVochtigheid;
         }
         klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU] = potVochtigheid;
         //klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU] = (potVochtigheid/maxPotVocht)*99; //100% past niet op display
@@ -484,11 +461,11 @@ class Plantenbak {
         Serial.print("Soil Moisture = ");  
         Serial.println((potVochtigheid/maxPotVocht)*99);//100% past niet op display
         Serial.print("in klimaatdatanu ");
-        Serial.println(klimaatDataNu[plantenBakNummer][POTVOCHTIGHEID]);
+        Serial.println(klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU]);
         int licht = lichtSensor.readLogValue();
         if(licht > maxLicht) {
             maxLicht = licht;
-            klimaatDataNu[plantenBakNummer][MEESTELICHT] = licht;
+            //klimaatDataNu[plantenBakNummer][MEESTELICHT] = licht;
         }
         //klimaatDataNu[plantenBakNummer][LICHT] = (licht/maxLicht)*99;//100% past niet op display
         klimaatDataNu[plantenBakNummer][LICHTNU] = licht;
@@ -509,57 +486,43 @@ class DataUitwisselaarSlave {
         pinMode(MISO, OUTPUT);// have to send on master in, *slave out*
         SPCR |= _BV(SPE);  // turn on SPI in slave mode
         SPCR |= _BV(SPIE); // turn on interrupts
+        flag1 = false;
     } 
-    
-    void updatKlimaatDataArray(){
-        Serial.println("in update klimaatdataarray");
-        Serial.print("flag2 = ");
-        Serial.println(flag2);
-        if (flag2 == true){//voledige boodschap ontavangen
-        for (int k = 0; k < 3; k++){
-            for (int l = 0; l < 31; l++){
-            Serial.print(klimaatDataNu[k][l]);
-            }
-            Serial.println();
-        }
-        Serial.println();
-        Serial.println("================");
-        flag2 = false;
-        }
-    }
 };
 
 ISR (SPI_STC_vect){
-    Serial.print("In SPI");
+    //flag2 = false;
     c = SPDR;
-    if (flag1 == false){ //flag1 is true tijdens de uitwisseling van het array en wordt weer false na voltooiing loop
-        if (c == 0xCD){ //als de startcode werd ontvangen    0xEF=239 0xCD=205 0xF3=243
-            SPDR = 0xEF; //teruggezonden startcode voor Master 0xEF=239
-            i = 0;
-            j = 0;
-        flag1 = true; //startcode ontvangen, na eerste keer geen startcode meer terugsturen
-            }
+    if (c == 0xCD){ 
+        SPDR = 0xEF; //teruggezonden startcode voor Master 0xEF=239
+        i = 0;
+        j = 0;
     } else {
         if (c == 0xF3){//0xF3=243
-            SPDR = klimaatDataNu[i][j];
+            SPDR = klimaatDataNu[i][j+10];
+
         } else {
             if (i < 3){
                 klimaatDataNu[i][j] = c;
                 j++;
-                if (j < 31){
-                    SPDR = klimaatDataNu[i][j];
+                if (j < 10){
+                    SPDR = klimaatDataNu[i][j+10];
                 }
-                if (j == 31){
+                if (j == 10){
                     j = 0;
                     i++;
+                    SPDR = klimaatDataNu[i][j+10];
                     if (i == 3){
                         flag2 = true;
-                        flag1 = false;
-                        for ( byte i = 0 ; i < 3 ; i++){
-                            for (byte j = 0 ; j < 31 ; j++){
-                                Serial.print(klimaatDataNu[i][j]);
+                        Serial.println("klimaatDataNu voledig ontvangen");
+                        for ( byte n = 0 ; n < 3 ; n++){
+                            for (byte t = 0 ; t < 20 ; t++){
+                                Serial.print(klimaatDataNu[n][t]);
+                                Serial.print("/");
                             }
+                        Serial.println();    
                         }
+                        Serial.println();
                     }
                 }
             }
@@ -585,16 +548,15 @@ void setup() {
 }
 
 void loop() {
-    //if (flag2 == true){
+    if (flag2 == true){
         Serial.println("begin loop slave");
 
         plantenbak1.regelKlimaat(bakNummer1);
         plantenbak2.regelKlimaat(bakNummer2);
         plantenbak3.regelKlimaat(bakNummer3);
+        flag2 = false;
 
-        dataUitwisselaarSlave.updatKlimaatDataArray();
-        delay(5000);////DEZE MOET ERUIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         Serial.println();
         Serial.println("end of loop Slave");
-    //}   
+    }   
 }
