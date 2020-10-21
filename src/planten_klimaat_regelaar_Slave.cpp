@@ -9,8 +9,6 @@
 
 #include<SPI.h>  //to get the meaning of MISO                                                                
 
-
-
 #define DAGTEMPERATUUR 0
 #define NACHTTEMPERATUUR 1
 #define LUCHTVOCHTIGHEID 2
@@ -68,21 +66,21 @@ class LichtSensor {
         Serial.println(pin);
     }
     
-    // read the raw value from the light sensor:
-    float readRawValue() {
-        float rawValue = analogRead(pin);
-        delay(10);
-        rawValue = analogRead(pin);
-        return(rawValue);
+    byte readLightValue() {
+        int rawValue = analogRead(pin); 
+        Serial.print(rawValue);
+        //delay(10);
+        // rawValue = byte(round(analogRead(pin)/10.24));//10.24 om van 1024 analoge waardes terug te gaan na 100
+        return(byte(round(analogRead(pin)/10.24)));//10.24 om van 1024 analoge waardes terug te gaan na 100
     }
 
-    // read the raw value from the light sensor:
-    float readLogValue() {
-        float rawValue = analogRead(pin);
-        float logLux = rawValue * logRange / rawRange;
-        float luxValue = pow(10, logLux);
-        return(luxValue);
-    }
+    // // read the log value from the light sensor:
+    // float readLogValue() {
+    //     float rawValue = analogRead(pin);
+    //     float logLux = rawValue * logRange / rawRange;
+    //     float luxValue = pow(10, logLux);
+    //     return(luxValue);
+    // }
 
 };
 
@@ -106,15 +104,19 @@ class SoilHumiditySensor {
         Serial.print("SoilHumiditySensorPowerPin = ");
         Serial.println(powerPin);
     }
-    
-    float readValue() {
+
+    byte readSoilHumidity() {
         digitalWrite(powerPin, HIGH);
         delay(10);
-        float soilmoisture = analogRead(pin);
+        byte soilmoisture = byte(round(analogRead(pin)/10.24));
         delay(10);
-        soilmoisture = analogRead(pin);
+        soilmoisture = byte(round(analogRead(pin)/10.24));
+        int rawValue = analogRead(pin); 
+        Serial.print("Soilhumidity = ");
+        Serial.println(rawValue);
         digitalWrite(powerPin, LOW);
-        return(soilmoisture);
+        
+        return(byte(soilmoisture));
     } 
 };
 
@@ -137,14 +139,24 @@ class LuchtVochtigheidTemperatuurSensor {
         Serial.println(pin);
     }
 
-    float readTempValue() {
+    byte readTempValue() {
         Serial.print("nieuwe temp meting");
-        return(dht.readTemperature());
+        byte temperatuur = byte(round(dht.readTemperature()));
+        if (isnan(temperatuur)) {
+            Serial.println(F("Failed to read from Temperature sensor!"));
+            return;
+        }
+        return(temperatuur);
     }
 
-    float readHumidityValue() {
-        Serial.print("nieuwe humidity meting");
-        return(dht.readHumidity());    //Print temp and humidity values to serial monitor
+    byte readHumidityValue() {
+        Serial.println("nieuwe humidity meting");
+        byte vochtigheid = byte(round(dht.readHumidity()));
+        if (isnan(vochtigheid)) {
+            Serial.println(F("Failed to read from humidity sensor!"));
+            return;
+        }
+        return(vochtigheid);    //Print temp and humidity values to serial monitor
     }
 };
 
@@ -433,23 +445,16 @@ class Plantenbak {
     void regelKlimaat(int plantenBakNummer) {
         Serial.print("plantenBakNummer in plantenBak regelKlimaat = ");
         Serial.println(plantenBakNummer);
-        float luchtVochtigheid = luchtVochtigheidTemperatuurSensor.readHumidityValue();
-        klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] = luchtVochtigheid;
+        klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU] = luchtVochtigheidTemperatuurSensor.readHumidityValue();
         Serial.print("Humidity = ");
-        Serial.println(luchtVochtigheid);
-        Serial.println(luchtVochtigheidTemperatuurSensor.readHumidityValue());
-        float temperatuur = luchtVochtigheidTemperatuurSensor.readTempValue();
-        Serial.print(" %, Temp  ");
-        klimaatDataNu[plantenBakNummer][TEMPERATUURNU] = temperatuur;
-        //Serial.print(" %, Temp  ");
-        Serial.print(temperatuur);
+        Serial.println(klimaatDataNu[plantenBakNummer][LUCHTVOCHTIGHEIDNU]);
+        //Serial.print(luchtVochtigheidTemperatuurSensor.readHumidityValue());
+        klimaatDataNu[plantenBakNummer][TEMPERATUURNU] = luchtVochtigheidTemperatuurSensor.readTempValue();
+        Serial.print("Temp  ");
+        Serial.print(klimaatDataNu[plantenBakNummer][TEMPERATUURNU]);
         Serial.println(" Celsius");
-        if (isnan(luchtVochtigheid) || isnan(temperatuur)) {
-            Serial.println(F("Failed to read from DHT sensor!"));
-            return;
-        }
-        Serial.println(luchtVochtigheidTemperatuurSensor.readTempValue());
-        int potVochtigheid = soilHumiditySensor.readValue();
+        //Serial.println(luchtVochtigheidTemperatuurSensor.readTempValue());
+        byte potVochtigheid = soilHumiditySensor.readSoilHumidity();
         if(potVochtigheid > maxPotVocht) {
             maxPotVocht = potVochtigheid;
             //klimaatDataNu[plantenBakNummer][HOOGSTEPOTVOCHTIGHEID] = potVochtigheid;
@@ -458,12 +463,11 @@ class Plantenbak {
         //klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU] = (potVochtigheid/maxPotVocht)*99; //100% past niet op display
         Serial.print("Soil Moisture = ");  
         Serial.println(potVochtigheid);
-        Serial.print("Soil Moisture = ");  
-        Serial.println((potVochtigheid/maxPotVocht)*99);//100% past niet op display
-        Serial.print("in klimaatdatanu ");
-        Serial.println(klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU]);
-        int licht = lichtSensor.readLogValue();
-        if(licht > maxLicht) {
+        // Serial.print("Soil Moisture = ");  
+        // Serial.println((potVochtigheid/maxPotVocht)*99);//100% past niet op display
+        // Serial.println(klimaatDataNu[plantenBakNummer][POTVOCHTIGHEIDNU]);
+        byte licht = lichtSensor.readLightValue();
+        if(licht >= maxLicht) {
             maxLicht = licht;
             //klimaatDataNu[plantenBakNummer][MEESTELICHT] = licht;
         }
@@ -471,9 +475,6 @@ class Plantenbak {
         klimaatDataNu[plantenBakNummer][LICHTNU] = licht;
         Serial.print("Licht = ");
         Serial.println(licht);
-        Serial.print("in klimaatdatanu");
-        Serial.println(klimaatDataNu[plantenBakNummer][LICHTNU]);
-        Serial.println((licht/maxLicht)*99); //100% past niet op display
         klimaatRegelaar.doeJeKlimaatDing();
     }  
 };
@@ -541,7 +542,7 @@ Plantenbak plantenbak3(pinArray3, bakNummer3);
 
 void setup() {
     Serial.begin(9600);
-    analogReference(EXTERNAL); 
+    //analogReference(EXTERNAL); 
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
