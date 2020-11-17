@@ -46,6 +46,7 @@ volatile bool flag2 = false; //wordt true na uiwisseling laatste element array
 byte pinArray1[8] = {A0, 9, A1, 24, 25, 20, 8, 27}; 
 byte pinArray2[8] = {A2, 11, A3, 24, 25, 20, 10, 27};
 byte pinArray3[8] = {A4, 13, A5, 24, 25, 20, 12, 27};
+//1soilsensorPin1, 2soilPower1, 3lightsensorPin1, 4lampenPin1, 5ventilatorpin1, 6vernevelaarpin1, 7dhtpin1
 
 byte klimaatDataNu[3][20]= {{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19},{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19},{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}};
 
@@ -111,9 +112,8 @@ class SoilHumiditySensor {
         byte soilmoisture = byte(round(analogRead(pin)/10.24));
         delay(10);
         soilmoisture = byte(round(analogRead(pin)/10.24));
-        int rawValue = analogRead(pin); 
-        Serial.print("Soilhumidity = ");
-        Serial.println(rawValue);
+        Serial.print("Soilhumidity  raw= ");
+        Serial.println(soilmoisture);
         digitalWrite(powerPin, LOW);
         
         return(byte(soilmoisture));
@@ -542,7 +542,7 @@ Plantenbak plantenbak3(pinArray3, bakNummer3);
 
 void setup() {
     Serial.begin(9600);
-    //analogReference(EXTERNAL); 
+    analogReference(EXTERNAL); 
     plantenbak1.setup();
     plantenbak2.setup();
     plantenbak3.setup();
@@ -553,7 +553,9 @@ void loop() {
         Serial.println("begin loop slave");
 
         plantenbak1.regelKlimaat(bakNummer1);
+        delay(1000);
         plantenbak2.regelKlimaat(bakNummer2);
+        delay(1000);
         plantenbak3.regelKlimaat(bakNummer3);
         flag2 = false;
 
